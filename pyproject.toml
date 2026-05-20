@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "exafs_neo"
+description = "exafs_neo AI analysis using GA"
+readme = "README.md"
+license = {text = "GPLv3"}
+keywords = ["exafs_neo", "AI", "analysis"]
+requires-python = ">=3.9"
+version = "2.0.19"
+
+authors = [
+    {name = "Miu Lun Lau,", email = "andylau@u.boisestate.edu"},
+    {name = "Jeff Terry", email = "terryj@illinoistech.edu"},
+    {name = "Min Long", email = "minlong@boisestate.edu"},
+]
+
+
+dependencies = [
+    "numpy",
+    "xraylarch",
+    "attrs",
+    "matplotlib",
+    "psutil",
+]
+
+[project.urls]
+Homepage = "https://github.com/laumiulun/EXAFS_Neo"
+Download = "https://github.com/laumiulun/EXAFS_Neo/tarball/master"
+
+[project.scripts]
+exafs_neo = "exafs_neo.input_arg:main"
+exafs_neo_gui = "exafs_neo.gui.XAFS_GUI:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["exafs_neo*"]
+
+[tool.setuptools.package-data]
+"exafs_neo.gui" = ["media/*"]

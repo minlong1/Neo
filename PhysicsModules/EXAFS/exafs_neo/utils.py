@@ -1,12 +1,13 @@
 import datetime
 import logging
+import time
 from pathlib import Path
-import sys
 from typing import Union, Dict
 
 import numpy as np
 
-from PhysicsModules.EXAFS.exafs_neo.helper import time_call
+from PhysicsModules.common.cli import BaseLogger
+from PhysicsModules.common.colors import TermColors
 from PhysicsModules.EXAFS.exafs_neo.utils_mapping import (
     neocrossover_int2str,
     neomutator_int2str,
@@ -14,7 +15,9 @@ from PhysicsModules.EXAFS.exafs_neo.utils_mapping import (
     neosolver_int2str,
 )
 
-# from neoPars import NeoPars
+
+def time_call():
+    return time.time()
 
 
 def raise_error(msg="Error"):
@@ -40,44 +43,9 @@ def checkKey(key, dictionary, alt_value=None, logger=None, verbose=False):
         return dictionary[key]
 
 
-class NeoLogger:
+class NeoLogger(BaseLogger):
     def __init__(self):
-        logging.basicConfig(level=logging.DEBUG)
-        self.logger = logging.getLogger("")
-        # file_handler = logging.FileHandler()
-        if self.logger.hasHandlers():
-            self.logger.handlers.clear()
-        self.log_path = None
-        self.logging_level = logging.DEBUG
-
-    def initialize_logging(self, log_path=None, log_format="%(message)s"):
-        self.log_path = log_path
-        formatter = logging.Formatter(log_format)
-
-        if log_path is not None:
-            file_handler = logging.FileHandler(
-                self.log_path, mode="a+", encoding="utf-8"
-            )
-            file_handler.setFormatter(formatter)
-            file_handler.setLevel(self.logging_level)
-            self.logger.addHandler(file_handler)
-
-        stdout_handler = logging.StreamHandler(stream=sys.stdout)
-        stdout_handler.setLevel(self.logging_level)
-        stdout_handler.setFormatter(formatter)
-        self.logger.addHandler(stdout_handler)
-        self.logger.setLevel(self.logging_level)
-
-    def set_loglevel(self, loglevel):
-        # TODO: change each of the handler to the level
-        self.logging_level = loglevel
-        self.logger.setLevel(loglevel)
-
-    def print(self, message: str):
-        self.logger.debug(message)
-
-    def __call__(self, message):
-        self.logger.debug(message)
+        super().__init__(name="", level=logging.DEBUG)
 
 
 def check_if_exists(path_file: Union[str, Path]) -> None:
@@ -91,16 +59,7 @@ def check_if_exists(path_file: Union[str, Path]) -> None:
     path_file.parent.mkdir(parents=True, exist_ok=True)
 
 
-class STRColors:
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
-
+class STRColors(TermColors):
     @staticmethod
     def logger_print_based_on_verbose_lvl(
         logger: NeoLogger, string: str, verbose_lvl: int, des_verbose_lvl: int

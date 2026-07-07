@@ -1,56 +1,14 @@
 import logging
-import sys
+
+from PhysicsModules.common.cli import BaseLogger, str_to_bool  # noqa: F401 (re-exported)
+from PhysicsModules.common.colors import TermColors as bcolors  # noqa: F401 (re-exported)
 
 __version__ = "0.1.0"
 
 
-class bcolors:
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
-
-
-def str_to_bool(s):
-    if s == "True":
-        return True
-    elif s == "False":
-        return False
-    else:
-        raise ValueError(f"Expected 'True' or 'False', got {s!r}")
-
-
-class NanoLogger:
-    """Message logger writing to stdout and, optionally, a log file."""
-
+class NanoLogger(BaseLogger):
     def __init__(self):
-        self.logger = logging.getLogger("nano_neo")
-        self.logger.handlers = []
-        self.logger.setLevel(logging.INFO)
-        self.log_path = None
-
-    def initialize_logging(self, log_path=None, log_format="%(message)s"):
-        formatter = logging.Formatter(log_format)
-        self.log_path = log_path
-
-        if log_path is not None:
-            file_handler = logging.FileHandler(log_path, mode="a+", encoding="utf-8")
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
-
-        stdout_handler = logging.StreamHandler(stream=sys.stdout)
-        stdout_handler.setFormatter(formatter)
-        self.logger.addHandler(stdout_handler)
-
-    def print(self, message: str):
-        self.logger.info(message)
-
-    def __call__(self, message):
-        self.logger.info(message)
+        super().__init__(name="nano_neo", level=logging.INFO)
 
 
 def banner():

@@ -17,7 +17,7 @@ implementing a small problem interface.
     ├── PhysicsModules/
     │   ├── EXAFS/                # EXAFS Neo — fully supported
     │   ├── NanoIndentation/      # Nano Neo — fully supported
-    │   └── XPS/                  # scaffold, not implemented yet
+    │   └── XPS/                  # XPS Neo — fully supported (self-contained GA, see its README)
     ├── pyproject.toml
     └── README.md
 
@@ -32,9 +32,13 @@ information are in
 load–displacement curves with the Oliver-Pharr model. See
 [PhysicsModules/NanoIndentation/README.md](PhysicsModules/NanoIndentation/README.md).
 
-**XPS** is a scaffold: its directory documents the module contract and
-contains a placeholder problem class and tests, ready for a future
-implementation. It is not supported yet.
+**XPS** (XPS Neo) fits X-ray Photoelectron Spectroscopy spectra (Voigt,
+Gaussian, Lorentzian, Double Lorentzian, Doniach-Sunjic peaks over Baseline/
+Linear/Shirley/SVSC/Tougaard backgrounds). Unlike the other two modules, it
+keeps its own GA/DE loop rather than routing through `Solvers` — its genome
+is a heterogeneous, type-tagged list, not a fixed-width float vector; see
+[PhysicsModules/XPS/README.md](PhysicsModules/XPS/README.md) for why and for
+its (pytest-based) test suite.
 
 ## The Solvers contract
 
@@ -67,7 +71,11 @@ From the repository root:
     # NanoIndentation (numpy only)
     python -m unittest discover -s PhysicsModules/NanoIndentation/tests -t . -v
 
+    # XPS (pytest, not unittest — see PhysicsModules/XPS/README.md)
+    cd PhysicsModules/XPS && pytest -m "not golden" -q
+
 Typical runs from the repository root:
 
     exafs_neo -i <your_exafs_input.ini>
     nano_neo -i <your_nanoindent_input.ini>
+    xps_neo -i <your_xps_input.ini>

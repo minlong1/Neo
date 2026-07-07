@@ -9,7 +9,7 @@ NEO is a modular scientific computing framework:
 - `Solvers/` — physics-agnostic optimization algorithms (numpy-only; **must never import larch or any physics module**). `core/` holds the framework (`ParameterSpace`/`GeneRange`, `Individual`, `Population`, `OptimizationProblem`, `RunState`, `SolverResult`, `BaseSolver`); `ga/` the genetic algorithm operators and `GASolver`/`GARechenbergSolver`; `de/` a Differential Evolution stub. `Solvers/__init__.py` has the solver registry (`get_solver("GA")`, numeric IDs 0/1/2 preserved from historical `solOpt` values).
 - `PhysicsModules/EXAFS/` — fits EXAFS spectra with a GA (needs xraylarch).
 - `PhysicsModules/NanoIndentation/` — Nano Neo: fits Oliver-Pharr power laws to nanoindentation unloading curves (numpy/matplotlib only). Ported from the standalone `nano_indent` package; its embedded GA was replaced by `Solvers`. Genome: `[A, hf, m] per path`, no shared genes. `nanoindentation_neo/gui/` is the legacy tkinter GUI, copied as-is and not wired to entry points.
-- `PhysicsModules/XPS/` — scaffold only; placeholder `problem.py` with `fitness()` raising `NotImplementedError`, contract tests, and a README describing what to fill in.
+- `PhysicsModules/XPS/` — XPS Neo: fits XPS spectra (Voigt/Gaussian/Lorentzian/Double Lorentzian/Doniach-Sunjic peaks, Baseline/Linear/Shirley/SVSC/Tougaard backgrounds) with its own GA/DE, ported from the standalone `XPS_Neo` package. **Does not use `Solvers`** — its genome is a heterogeneous list of floats interleaved with peak/background type-name strings, not a fixed-width float vector; see `PhysicsModules/XPS/README.md` ("Why this module doesn't use Solvers") before trying to route it through `Solvers.core`. Tests are **pytest**, not `unittest` — a deliberate exception, kept to preserve its bit-exact golden-master suite as-is.
 - `PhysicsModules/common/` — non-physics infra shared across modules: `colors.py:TermColors` (ANSI codes) and `cli.py:str_to_bool`/`BaseLogger`. Each module's `helper.py` re-exports these under its historical names (`Bcolors`/`bcolors`, `NeoLogger`/`NanoLogger`); add new cross-module (non-solver) infra here rather than redefining it per module.
 
 A physics module plugs into the solvers by subclassing `Solvers.core.OptimizationProblem` (a `ParameterSpace` + `fitness(genes) -> float`, plus optional `sample_genes`/`on_generation_end`/`on_run_end` hooks). `PhysicsModules/EXAFS/exafs_neo/problem.py:EXAFSProblem` is the reference implementation.
@@ -43,9 +43,14 @@ NanoIndentation tests (numpy-only; synthetic data, no instrument files needed):
 ```
 python -m unittest discover -s PhysicsModules/NanoIndentation/tests -t . -v
 ```
-XPS scaffold tests: `python -m unittest discover -s PhysicsModules/XPS/tests -t . -v`.
+XPS tests (pytest, not unittest; needs numba/scipy):
+```
+cd PhysicsModules/XPS && pytest -m "not golden" -q     # unit + component, ~2s
+cd PhysicsModules/XPS && pytest -m golden -q           # full CLI matrix, ~1min
+```
+Golden tests are bit-exact only in the pinned `PhysicsModules/XPS/constraints.txt` environment; in this repo's default env expect numpy-repr-only and last-digit float diffs (see `PhysicsModules/XPS/README.md`), not real regressions.
 
-CLIs (entry points in `pyproject.toml`): `exafs_neo -i <input.ini>` (GUI via `exafs_neo_gui`), `nano_neo -i <input.ini>`. Note the bundled EXAFS `tests/cu_test_files/test_cu.ini` references `path_files/Cu/...` paths that don't exist in this repo, so it is not runnable as-is; the actual test data lives at `PhysicsModules/EXAFS/tests/cu_test_files/cu_paths/`.
+CLIs (entry points in `pyproject.toml`): `exafs_neo -i <input.ini>` (GUI via `exafs_neo_gui`), `nano_neo -i <input.ini>`, `xps_neo -i <input.ini>` (GUI via `xps_neo_gui`). Note the bundled EXAFS `tests/cu_test_files/test_cu.ini` references `path_files/Cu/...` paths that don't exist in this repo, so it is not runnable as-is; the actual test data lives at `PhysicsModules/EXAFS/tests/cu_test_files/cu_paths/`.
 
 ## Architecture
 
@@ -61,13 +66,21 @@ The genome is a flat vector of genes; each gene samples from a discrete `GeneRan
 
 `exafs_neo/problem.py` also provides `NeoRunStateView`, a read-only adapter exposing the Solvers `RunState` interface over `NeoPars` bookkeeping (`runPars`/`bestFitPars`), attached to `NeoPopulations` as `pops.state` alongside `pops.problem`.
 
+### XPS module flow
+
+`input_arg.py` (CLI, argparse + `--seed`) → `parser2.py`/`ini_parser.py` (`.ini` → flat `config` dict via `load_config`) → `xps.py:main()` does `globals().update(config)` — `XPS_GA`'s methods deliberately read config as bare module globals of `xps.py` (a documented transitional seam carried over from the source project; don't "fix" a bare read into a `self.x`/`cfg.x` write, that changes mutation-sharing semantics for `addPeak`/`removePeak`). `XPS_GA.run()` drives the GA/DE loop directly (its own `next_generation`/`mutatePopulation`/`crossover`, or the DE path when `mutated_options == 3`) — no `Solvers` involvement; see `PhysicsModules/XPS/README.md` for why. `xps_individual.py:Individual.getFit` evaluates a candidate by summing `xps_fit.py` peak/background curves; `loss.py:compute_loss` is the one fitness function, shared with the GUI's post-analysis.
+
 ### Adding a new solver
 
 Implement `step()` on a `BaseSolver` subclass under `Solvers/<name>/`, register it in `SOLVER_REGISTRY` in `Solvers/__init__.py`. The base class owns the generation loop, result collection, and problem hooks.
 
 ### Adding a new physics module
 
-Follow `PhysicsModules/XPS/README.md`: subclass `OptimizationProblem` (all I/O inside the module), add an input parser + CLI entry point in `pyproject.toml` `[project.scripts]`, and module tests under `PhysicsModules/<Name>/tests/`. Add the test run to both `.github/workflows/*.yml`.
+Two patterns, pick based on whether the fit parameters are a fixed-width vector of floats:
+- **Flat float genome** (most cases): subclass `Solvers.core.OptimizationProblem` (all I/O inside the module), add an input parser + CLI entry point in `pyproject.toml` `[project.scripts]`, and module tests under `PhysicsModules/<Name>/tests/` (`unittest`, run via `python -m unittest discover`). `PhysicsModules/EXAFS/exafs_neo/problem.py` and `PhysicsModules/NanoIndentation/nanoindentation_neo/problem.py` are the reference implementations.
+- **Heterogeneous/variable-shape genome**: keep the module's own solver loop self-contained, as `PhysicsModules/XPS/` does — don't force-fit it through `Solvers.core`. Document the decision in the module's README the way `PhysicsModules/XPS/README.md` does.
+
+Either way: add the test run to both `.github/workflows/*.yml`.
 
 ## Gotchas
 

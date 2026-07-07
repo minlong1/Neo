@@ -24,10 +24,10 @@ The goal of this design is a modular framework where:
 ┌──────────────────────────────────────────────────────────┐
 │ PhysicsModules/                                          │
 │                                                          │
-│  EXAFS/          NanoIndentation/       XPS/             │
-│  (larch, FEFF)   (Oliver-Pharr)         (scaffold)       │
-│      │                 │                  │              │
-│      └────────┬────────┴──────────────────┘              │
+│  EXAFS/          NanoIndentation/       XPS/*            │
+│  (larch, FEFF)   (Oliver-Pharr)      (own GA/DE loop)    │
+│      │                 │                                 │
+│      └────────┬────────┘                                 │
 │               ▼                                          │
 │    OptimizationProblem (the contract)                    │
 │    - space: ParameterSpace                               │
@@ -50,6 +50,12 @@ The goal of this design is a modular framework where:
 └──────────────────────────────────────────────────────────┘
 ```
 
+\* XPS doesn't route through `OptimizationProblem`/`Solvers` — its genome
+is a heterogeneous, type-tagged list rather than a fixed-width float
+vector, so it keeps its own (already working, already tested) GA/DE loop.
+See "Module status and porting notes" below and
+`PhysicsModules/XPS/README.md`.
+
 ### The genome model
 
 A candidate solution is a **flat vector of genes**. Each gene draws from a
@@ -64,7 +70,15 @@ Physics modules define the genome layout and its meaning:
 |-----------------|--------------------------------------------|--------------|
 | EXAFS           | `[e0, (s02, sigma2, deltaR) × npath]`      | e0           |
 | NanoIndentation | `[(A, hf, m) × npaths]`                    | none         |
-| XPS (future)    | e.g. `[(BE, amp, fwhm, mix) × npeaks]`     | tbd          |
+| XPS             | not a flat float vector — see below        | n/a          |
+
+XPS's actual "genome" (`Individual.get_params()`) is a list of floats
+**interleaved with peak/background type-name strings** (`'Voigt'`,
+`'Baseline'`, ...) marking block boundaries, and the number of floats per
+block varies with peak type (singlet vs. doublet vs. Coster-Kronig) and
+correlated/limited-parameter settings. That doesn't fit the
+`ParameterSpace` model above, so XPS opts out of `Solvers` entirely rather
+than distorting either side to make it fit.
 
 Generic operators never interpret genes — they only sample, mix, and perturb
 them within the space. Anything meaning-dependent (EXAFS's shared-E0
@@ -96,16 +110,19 @@ physics config objects.
 
 Every module under `PhysicsModules/<Name>/` provides:
 
-1. `problem.py` — the `OptimizationProblem` subclass. All I/O and model math
-   stay behind this interface; solvers never see files or spectra.
+1. Either `problem.py` — the `OptimizationProblem` subclass (all I/O and
+   model math stay behind this interface; solvers never see files or
+   spectra) — **or**, if the fit parameters genuinely aren't a fixed-width
+   float vector (see XPS), a self-contained solver loop, with the decision
+   and why documented in the module's README.
 2. An input parser for the module's historical `.ini` format (functions,
    not import-time side effects) and a CLI entry point registered in the
    root `pyproject.toml` under `[project.scripts]`.
-3. `tests/` — run from the repository root; must not require instrument
-   data when synthetic fixtures suffice.
+3. `tests/` — must not require instrument data when synthetic fixtures
+   suffice. `unittest`, run from the repository root, for the `Solvers`-based
+   modules; XPS is the one exception (pytest, kept as ported — see its
+   README).
 4. `README.md` — setup, input format, examples.
-
-`PhysicsModules/XPS/README.md` documents this contract for the next module.
 
 ## Module status and porting notes
 
@@ -134,11 +151,21 @@ discard-and-regenerate), import-time argparse/globals removed, Rechenberg
 step unified with the shared schedule. The old tkinter GUI is carried as-is
 under `nanoindentation_neo/gui/`, unwired.
 
-### XPS (scaffold)
+### XPS (functional; ported as-is, self-contained GA)
 
-Placeholder `XPSProblem` (fitness raises `NotImplementedError`), contract
-tests proving it plugs into the registry, README describing the fill-in
-steps.
+Ported from the standalone `XPS_Neo` package, which had already gone
+through its own production-readiness effort (determinism/seeding, a
+golden-master regression harness, killing import-time side effects,
+unifying a diverged GUI/CLI fork, a performance pass — all bit-exact
+gated). That work is carried over essentially mechanically (import paths
+rewritten to `PhysicsModules.XPS.xps_neo.*`; `helper.py` reuses
+`PhysicsModules/common` for colors/`str_to_bool` the same way EXAFS and
+NanoIndentation do). Unlike the other two modules, XPS's GA/DE loop
+(`xps.py:XPS_GA`) is **not** rewired onto `Solvers` — see "The genome
+model" above and `PhysicsModules/XPS/README.md` for the reasoning. Its
+test suite (pytest: unit, component/numerical, and golden-master) is
+likewise ported as-is rather than translated to `unittest`, to keep its
+bit-exact regression discipline intact.
 
 ## Design rules
 
@@ -149,8 +176,10 @@ steps.
    changing them requires migrating the affected module's input format
    deliberately, not as a side effect.
 4. New solver = subclass `BaseSolver`, implement `step()`, register in
-   `SOLVER_REGISTRY`. New physics = implement `OptimizationProblem`, add
-   parser + CLI + tests + README, add the test path to CI.
+   `SOLVER_REGISTRY`. New physics = implement `OptimizationProblem` (or, if
+   the genome genuinely isn't a fixed-width float vector, a self-contained
+   solver loop, documented like XPS's) — add parser + CLI + tests + README,
+   add the test path to CI.
 
 ## Verification strategy
 
@@ -164,3 +193,14 @@ steps.
 - NanoIndentation is verified against synthetic Oliver-Pharr curves with
   known ground truth (recovered within grid tolerance), plus an end-to-end
   `.ini` → outputs run for every mutation option.
+- XPS parity was checked against its own golden-master matrix (9 cases
+  spanning every peak/background family, singlet/doublet/Coster-Kronig,
+  correlated/limited parameters, and both the GA and DE paths): all 9
+  reproduce their expected generation-by-generation trajectory once the
+  environment-dependent `np.float64(...)` repr difference (numpy ≥2.0 vs.
+  this repo's numpy 1.26) is normalized away; 4 of 9 are bit-exact even
+  without normalizing. The remaining divergence is confirmed last-significant-digit
+  float noise from running outside the pinned `constraints.txt` environment
+  (numpy/numba/scipy version drift) — not a logic difference. 34 of 36 fast
+  (non-golden) tests pass outright; the other 2 fail at the ~1e-14 relative
+  level for the same reason.

@@ -62,7 +62,14 @@ jobs:
       run: |
         python -m unittest discover -s tests -t ../.. -v
 
-    - name: Run module tests
+    - name: Run NanoIndentation tests
       run: |
-        python -m unittest discover -s PhysicsModules/XPS/tests -t . -v
         python -m unittest discover -s PhysicsModules/NanoIndentation/tests -t . -v
+
+    - name: Run XPS tests
+      # pytest, not unittest — see PhysicsModules/XPS/README.md. Golden
+      # tests are bit-exact only in the pinned constraints.txt environment,
+      # so only the fast (non-golden) suite runs in CI's default env.
+      working-directory: PhysicsModules/XPS
+      run: |
+        pytest -m "not golden" -q

@@ -10,6 +10,7 @@ NEO is a modular scientific computing framework:
 - `PhysicsModules/EXAFS/` — fits EXAFS spectra with a GA (needs xraylarch).
 - `PhysicsModules/NanoIndentation/` — Nano Neo: fits Oliver-Pharr power laws to nanoindentation unloading curves (numpy/matplotlib only). Ported from the standalone `nano_indent` package; its embedded GA was replaced by `Solvers`. Genome: `[A, hf, m] per path`, no shared genes. `nanoindentation_neo/gui/` is the legacy tkinter GUI, copied as-is and not wired to entry points.
 - `PhysicsModules/XPS/` — scaffold only; placeholder `problem.py` with `fitness()` raising `NotImplementedError`, contract tests, and a README describing what to fill in.
+- `PhysicsModules/common/` — non-physics infra shared across modules: `colors.py:TermColors` (ANSI codes) and `cli.py:str_to_bool`/`BaseLogger`. Each module's `helper.py` re-exports these under its historical names (`Bcolors`/`bcolors`, `NeoLogger`/`NanoLogger`); add new cross-module (non-solver) infra here rather than redefining it per module.
 
 A physics module plugs into the solvers by subclassing `Solvers.core.OptimizationProblem` (a `ParameterSpace` + `fitness(genes) -> float`, plus optional `sample_genes`/`on_generation_end`/`on_run_end` hooks). `PhysicsModules/EXAFS/exafs_neo/problem.py:EXAFSProblem` is the reference implementation.
 

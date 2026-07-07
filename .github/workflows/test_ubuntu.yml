@@ -3,6 +3,7 @@ name: Test with Ubuntu, Mamba
 on:
   push:
     branches:
+      - main
       - master
       - devel
 
@@ -49,11 +50,19 @@ jobs:
         pip install lmfit peakutils pyepics pyshortcuts termcolor sphinx dill pycifrw xraydb wxmplot wxutils fabio silx imageio charset-normalizer
         pip install xraylarch
 
-#    - name: Debug - Show files to find pyproject.toml
-#      run: ls -R
-    - name: install EXAFS-Neo
+    - name: install NEO
       run: |
-        pip install pyproject.toml
-    - name: Run tests
+        pip install .
+    - name: Run Solvers tests
       run: |
-        python -m unittest discover -s tests -v
+        python -m unittest discover -s Solvers/tests -t . -v
+    - name: Run EXAFS tests
+      # cwd must be the EXAFS module (test data paths are relative to it);
+      # -t points discovery back at the repo root for imports
+      working-directory: PhysicsModules/EXAFS
+      run: |
+        python -m unittest discover -s tests -t ../.. -v
+    - name: Run module scaffold tests
+      run: |
+        python -m unittest discover -s PhysicsModules/XPS/tests -t . -v
+        python -m unittest discover -s PhysicsModules/NanoIndentation/tests -t . -v

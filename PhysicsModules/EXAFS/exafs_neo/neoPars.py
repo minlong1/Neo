@@ -229,7 +229,9 @@ class NeoPars:
 @define
 class EXAFSPathRange:
     pathrange_file: str = ""
-    pathrange_pars: list = field(default=[])
+    # factory (not a shared default) — a plain [] default would be shared
+    # across every NeoPars instance in the process and grow on each run
+    pathrange_pars: list = field(factory=list)
     npath: int = 0
 
     # e0, for anything

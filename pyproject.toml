@@ -31,15 +31,16 @@ Homepage = "https://github.com/laumiulun/EXAFS_Neo"
 Download = "https://github.com/laumiulun/EXAFS_Neo/tarball/master"
 
 [project.scripts]
-exafs_neo = "exafs_neo.input_arg:main"
-exafs_neo_gui = "exafs_neo.gui.XAFS_GUI:main"
+exafs_neo = "PhysicsModules.EXAFS.exafs_neo.input_arg:main"
+exafs_neo_gui = "PhysicsModules.EXAFS.exafs_neo.gui.XAFS_GUI:main"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["exafs_neo*"]
+include = ["Solvers*", "PhysicsModules*"]
+exclude = ["*.tests", "*.tests.*"]
 
 [tool.setuptools.package-data]
-"exafs_neo.gui" = ["media/*"]
+"PhysicsModules.EXAFS.exafs_neo.gui" = ["media/*"]

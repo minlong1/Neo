@@ -1,43 +1,65 @@
 # NEO
 
-NEO is being refactored into a modular scientific computing framework. The new repository structure is organized around separate physics modules, 
-with each module intended to contain its own source code, tests, example files, documentation, and setup instructions.
-
-## Current Status
-
-At the moment, the only supported module in this repository is EXAFS:
-
-PhysicsModules/EXAFS
-
-The EXAFS module contains the current working version of EXAFS Neo, which uses a genetic algorithm to fit Extended X-ray Absorption Fine Structure data.
-
-Other modules may be added to the PhysicsModules directory in the future, but they are not currently supported unless explicitly documented.
+NEO is a modular scientific computing framework. Optimization algorithms live
+in a shared, physics-agnostic `Solvers` package; each physics application
+lives in its own module under `PhysicsModules` and plugs into the solvers by
+implementing a small problem interface.
 
 ## Repository Structure
 
-The repository is organized around the following top-level layout:
+    NEO/
+    ├── Solvers/                  # physics-agnostic solvers (numpy only)
+    │   ├── core/                 # ParameterSpace, Individual, Population,
+    │   │                         #   OptimizationProblem, BaseSolver, ...
+    │   ├── ga/                   # Genetic Algorithm (+ Rechenberg variant)
+    │   ├── de/                   # Differential Evolution (stub)
+    │   └── tests/
+    ├── PhysicsModules/
+    │   ├── EXAFS/                # EXAFS Neo — fully supported
+    │   ├── XPS/                  # scaffold, not implemented yet
+    │   └── NanoIndentation/      # scaffold, not implemented yet
+    ├── pyproject.toml
+    └── README.md
 
-NEO/
-├── PhysicsModules/
-│   └── EXAFS/
-│       ├── tests/
-│       ├── path_files/
-│       ├── result/
-│       └── README.md
-├── setup.py
-├── requirements.txt
-└── README.md
+## Physics modules
 
-The top-level README describes the overall NEO framework structure. Module-specific setup instructions, dependencies, example commands, and test information are maintained inside each module directory.
+**EXAFS** is the working module: it fits Extended X-ray Absorption Fine
+Structure data with a genetic algorithm. Setup instructions, dependencies,
+example commands, and test information are in
+[PhysicsModules/EXAFS/README.md](PhysicsModules/EXAFS/README.md).
 
-## Setting Up EXAFS
+**XPS** and **NanoIndentation** are scaffolds: their directories document the
+module contract and contain placeholder problem classes and tests, ready for
+a future implementation. They are not supported yet.
 
-To install and run the EXAFS module, follow the README located inside the EXAFS module directory:
+## The Solvers contract
 
-PhysicsModules/EXAFS/README.md
+A physics module exposes its fitting task by subclassing
+`Solvers.core.OptimizationProblem` — a `ParameterSpace` describing the fit
+parameters plus a `fitness(genes)` function — and can then run any registered
+solver:
 
-That README contains the currently supported setup process for EXAFS, including environment creation, dependency installation, and example usage.
+```python
+from Solvers import get_solver
 
-A typical EXAFS test command from the repository root is:
+solver = get_solver("GA")(problem, options={"nPops": 100, "nGen": 100})
+result = solver.run()
+```
 
-exafs -i PhysicsModules/EXAFS/tests/cu_test_files/test_cu.ini
+Available solvers: `GA`, `GA_Rechenberg`, `DE` (stub). New solvers are added
+under `Solvers/` and registered in `Solvers/__init__.py` — physics modules
+pick them up without code changes.
+
+## Running tests
+
+From the repository root:
+
+    # solver framework (no physics dependencies needed)
+    python -m unittest discover -s Solvers/tests -t . -v
+
+    # EXAFS (requires xraylarch; see the EXAFS README)
+    cd PhysicsModules/EXAFS && python -m unittest discover -s tests -t ../.. -v
+
+A typical EXAFS run from the repository root:
+
+    exafs_neo -i <your_input.ini>

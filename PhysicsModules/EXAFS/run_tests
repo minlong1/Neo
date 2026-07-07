@@ -1,7 +1,8 @@
 #!/bin/bash
+# Run the EXAFS test suite. Test data paths are relative to this directory,
+# while imports are rooted at the repository root (-t ../..).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
 
-python -m unittest discover -s tests -v
-
+python -m unittest discover -s tests -t ../.. -v

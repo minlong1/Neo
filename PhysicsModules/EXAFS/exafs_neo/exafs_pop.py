@@ -8,6 +8,7 @@ from larch.xafs import feffdat
 
 from PhysicsModules.EXAFS.exafs_neo.individual import Individual
 from PhysicsModules.EXAFS.exafs_neo.neoPars import NeoPars
+from PhysicsModules.EXAFS.exafs_neo.problem import EXAFSProblem, NeoRunStateView
 
 
 def fitness(exafs_neo_pars, ind_obj, return_tot=False):
@@ -64,6 +65,15 @@ class NeoPopulations:
     population_score: List = field(factory=list)
     population_perf: dict = field(factory=dict)
     next_population: List = field(factory=list)
+    # Solvers-facing views, so generic operators can run against this
+    # population (pops.problem.fitness, pops.state.currGen, ...)
+    problem: EXAFSProblem = None
+    state: NeoRunStateView = None
+
+    def __attrs_post_init__(self):
+        if self.exafs_NeoPars is not None:
+            self.problem = EXAFSProblem(self.exafs_NeoPars)
+            self.state = NeoRunStateView(self.exafs_NeoPars)
 
     def generate_individual(self) -> Individual:
         if not self.exafs_NeoPars.runPars.secondHalf:

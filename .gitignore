@@ -49,6 +49,7 @@ global_analysis/
 Data/
 docs/
 exafs.egg-info/
+*.egg-info/
 *.vscode
 .idea/
 

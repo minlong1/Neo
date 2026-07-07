@@ -33,6 +33,7 @@ Download = "https://github.com/laumiulun/EXAFS_Neo/tarball/master"
 [project.scripts]
 exafs_neo = "PhysicsModules.EXAFS.exafs_neo.input_arg:main"
 exafs_neo_gui = "PhysicsModules.EXAFS.exafs_neo.gui.XAFS_GUI:main"
+nano_neo = "PhysicsModules.NanoIndentation.nanoindentation_neo.input_arg:main"
 
 [tool.setuptools]
 include-package-data = true

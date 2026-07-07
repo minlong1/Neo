@@ -62,7 +62,7 @@ jobs:
       working-directory: PhysicsModules/EXAFS
       run: |
         python -m unittest discover -s tests -t ../.. -v
-    - name: Run module scaffold tests
+    - name: Run module tests
       run: |
         python -m unittest discover -s PhysicsModules/XPS/tests -t . -v
         python -m unittest discover -s PhysicsModules/NanoIndentation/tests -t . -v

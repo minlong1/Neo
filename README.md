@@ -16,21 +16,25 @@ implementing a small problem interface.
     │   └── tests/
     ├── PhysicsModules/
     │   ├── EXAFS/                # EXAFS Neo — fully supported
-    │   ├── XPS/                  # scaffold, not implemented yet
-    │   └── NanoIndentation/      # scaffold, not implemented yet
+    │   ├── NanoIndentation/      # Nano Neo — fully supported
+    │   └── XPS/                  # scaffold, not implemented yet
     ├── pyproject.toml
     └── README.md
 
 ## Physics modules
 
-**EXAFS** is the working module: it fits Extended X-ray Absorption Fine
-Structure data with a genetic algorithm. Setup instructions, dependencies,
-example commands, and test information are in
+**EXAFS** fits Extended X-ray Absorption Fine Structure data with a genetic
+algorithm. Setup instructions, dependencies, example commands, and test
+information are in
 [PhysicsModules/EXAFS/README.md](PhysicsModules/EXAFS/README.md).
 
-**XPS** and **NanoIndentation** are scaffolds: their directories document the
-module contract and contain placeholder problem classes and tests, ready for
-a future implementation. They are not supported yet.
+**NanoIndentation** (Nano Neo) fits the unloading segment of nanoindentation
+load–displacement curves with the Oliver-Pharr model. See
+[PhysicsModules/NanoIndentation/README.md](PhysicsModules/NanoIndentation/README.md).
+
+**XPS** is a scaffold: its directory documents the module contract and
+contains a placeholder problem class and tests, ready for a future
+implementation. It is not supported yet.
 
 ## The Solvers contract
 
@@ -60,6 +64,10 @@ From the repository root:
     # EXAFS (requires xraylarch; see the EXAFS README)
     cd PhysicsModules/EXAFS && python -m unittest discover -s tests -t ../.. -v
 
-A typical EXAFS run from the repository root:
+    # NanoIndentation (numpy only)
+    python -m unittest discover -s PhysicsModules/NanoIndentation/tests -t . -v
 
-    exafs_neo -i <your_input.ini>
+Typical runs from the repository root:
+
+    exafs_neo -i <your_exafs_input.ini>
+    nano_neo -i <your_nanoindent_input.ini>

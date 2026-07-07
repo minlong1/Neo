@@ -45,6 +45,13 @@ xmu_data/
 PhysicsModules/EXAFS/path_files/
 *.csv
 *.txt
+# XPS test fixtures / pinned dev deps: tracked on purpose despite the
+# blanket *.csv/*.txt rules above (those target EXAFS run-output litter).
+!PhysicsModules/XPS/datafile/*.txt
+!PhysicsModules/XPS/constraints.txt
+!PhysicsModules/XPS/requirements-dev.txt
+!PhysicsModules/XPS/tests/golden/expected/**/*.txt
+!PhysicsModules/XPS/tests/golden/expected/**/*.csv
 global_analysis/
 Data/
 docs/

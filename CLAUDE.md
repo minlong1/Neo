@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 NEO is a modular scientific computing framework:
 
-- `Solvers/` — physics-agnostic optimization algorithms (numpy-only; **must never import larch or any physics module**). `core/` holds the framework (`ParameterSpace`/`GeneRange`, `Individual`, `Population`, `OptimizationProblem`, `RunState`, `SolverResult`, `BaseSolver`); `ga/` the genetic algorithm operators and `GASolver`/`GARechenbergSolver`; `de/` a Differential Evolution stub. `Solvers/__init__.py` has the solver registry (`get_solver("GA")`, numeric IDs 0/1/2 preserved from historical `solOpt` values).
+- `Solvers/` — physics-agnostic optimization algorithms (numpy-only; **must never import larch or any physics module**). `core/` holds the framework (`ParameterSpace`/`GeneRange`, `Individual`, `Population`, `OptimizationProblem`, `RunState`, `SolverResult`, `BaseSolver`); `ga/` the genetic algorithm operators and `GASolver`/`GARechenbergSolver`; `de/` Differential Evolution (DE/rand/1/bin) as both a `BaseSolver` (`DESolver`) and a standalone `differential_evolution_step(population, F, CR)` function physics modules can call per-generation directly. `Solvers/__init__.py` has the solver registry (`get_solver("GA")`, numeric IDs 0/1/2 preserved from historical `solOpt` values).
 - `PhysicsModules/EXAFS/` — fits EXAFS spectra with a GA (needs xraylarch).
 - `PhysicsModules/NanoIndentation/` — Nano Neo: fits Oliver-Pharr power laws to nanoindentation unloading curves (numpy/matplotlib only). Ported from the standalone `nano_indent` package; its embedded GA was replaced by `Solvers`. Genome: `[A, hf, m] per path`, no shared genes. `nanoindentation_neo/gui/` is the legacy tkinter GUI, copied as-is and not wired to entry points.
 - `PhysicsModules/XPS/` — XPS Neo: fits XPS spectra (Voigt/Gaussian/Lorentzian/Double Lorentzian/Doniach-Sunjic peaks, Baseline/Linear/Shirley/SVSC/Tougaard backgrounds) with its own GA/DE, ported from the standalone `XPS_Neo` package. **Does not use `Solvers`** — its genome is a heterogeneous list of floats interleaved with peak/background type-name strings, not a fixed-width float vector; see `PhysicsModules/XPS/README.md` ("Why this module doesn't use Solvers") before trying to route it through `Solvers.core`. Tests are **pytest**, not `unittest` — a deliberate exception, kept to preserve its bit-exact golden-master suite as-is.
@@ -18,11 +18,15 @@ A physics module plugs into the solvers by subclassing `Solvers.core.Optimizatio
 
 Run all commands from the **repository root** unless noted — the codebase uses absolute imports rooted there (e.g. `from PhysicsModules.EXAFS.exafs_neo.exafs import ExafsNeo`).
 
-Install (editable):
+Install (editable): each module's third-party deps are an optional extra (bare install = `Solvers` + numpy only, no physics module CLIs work until you add one):
 ```
-pip install -e .
+pip install -e .              # Solvers only
+pip install -e ".[exafs]"     # + xraylarch, scipy, attrs, matplotlib, psutil
+pip install -e ".[nanoindentation]"  # + matplotlib (core fit needs only numpy)
+pip install -e ".[xps]"       # + scipy, numba, matplotlib, psutil
+pip install -e ".[all]"       # every module's extra
 ```
-`xraylarch` is finicky — see `PhysicsModules/EXAFS/README.md` (conda/mamba recommended). The `Solvers` package and its tests need only numpy.
+`xraylarch` is finicky — see `PhysicsModules/EXAFS/README.md` (conda/mamba recommended). See root `README.md` "Installing a single module" for the full per-module rundown.
 
 Solvers tests (fast, no larch needed):
 ```
@@ -60,9 +64,9 @@ The genome is a flat vector of genes; each gene samples from a discrete `GeneRan
 
 ### EXAFS module flow
 
-`input_arg.py` (CLI) → `parser.py`/`ini_parser.py` (.ini → validated dict) → `neoPars.py:NeoPars` (central config/state, attrs-based sub-par classes; `.ini` keys map here) → `exafs.py:ExafsNeo` runs the loop: per generation `NeoSolver.solve(...)` → selection/crossover/mutation → `NeoPopulations.eval_population()` → `NeoResult.collect` + `NeoFilePars` output writing. E0 gets specially optimized at `nGen//2` and at the end (`exafs_pop.py:optimize_e0`).
+`input_arg.py` (CLI) → `parser.py`/`ini_parser.py` (.ini → validated dict) → `neoPars.py:NeoPars` (central config/state, attrs-based sub-par classes; `.ini` keys map here) → `exafs.py:ExafsNeo` runs the loop: per generation `NeoSolver.solve(...)` → selection/crossover/mutation (or, for `solOpt == 2`, `Solvers.de.differential_evolution_step`) → `NeoPopulations.eval_population()` → `NeoResult.collect` + `NeoFilePars` output writing. E0 gets specially optimized at `nGen//2` and at the end (`exafs_pop.py:optimize_e0`).
 
-**Back-compat shim layer**: `neoSelector.py`, `neoCrossOver.py`, `neoMutator.py`, `neoSolver.py` keep the historical EXAFS API (`NeoSelector().initialize(exafs_pars)` / `.select(pops)` etc.) but delegate the algorithms to `Solvers.ga`. Preserved quirks the tests pin: `mutator.mutOpt == mut_options + 1`, exact `mutType`/`croType`/`solver_operator` label strings, and Rechenberg writing `mutPars.mutChance` (which the active mutator sampled at init — historically a near-no-op). Don't "fix" these without updating the tests.
+**Back-compat shim layer**: `neoSelector.py`, `neoCrossOver.py`, `neoMutator.py`, `neoSolver.py` keep the historical EXAFS API (`NeoSelector().initialize(exafs_pars)` / `.select(pops)` etc.) but delegate the algorithms to `Solvers.ga`/`Solvers.de`. Preserved quirks the tests pin: `mutator.mutOpt == mut_options + 1`, exact `mutType`/`croType`/`solver_operator` label strings, and Rechenberg writing `mutPars.mutChance` (which the active mutator sampled at init — historically a near-no-op). Don't "fix" these without updating the tests. `neoSolver.py:NeoSolver_DE` (`solOpt == 2`) delegates to `Solvers.de.differential_evolution_step(pops, F, CR)` — `NeoPopulations` already exposes the `.problem`/`.generate_individual()`/`.eval_population()` surface that function needs, so no EXAFS-specific DE math lives there.
 
 `exafs_neo/problem.py` also provides `NeoRunStateView`, a read-only adapter exposing the Solvers `RunState` interface over `NeoPars` bookkeeping (`runPars`/`bestFitPars`), attached to `NeoPopulations` as `pops.state` alongside `pops.problem`.
 

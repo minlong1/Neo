@@ -44,7 +44,7 @@ The goal of this design is a modular framework where:
 │         BaseSolver (owns the generation loop)            │
 │  ga/    selectors · crossovers · mutators                │
 │         GASolver · GARechenbergSolver                    │
-│  de/    DESolver (stub)                                  │
+│  de/    DESolver · differential_evolution_step()         │
 │                                                          │
 │  registry: get_solver("GA" | "GA_Rechenberg" | "DE")     │
 └──────────────────────────────────────────────────────────┘
@@ -99,12 +99,23 @@ pluggable strategies selected by the same numeric option IDs the historical
 - **Mutators**: per individual (0), per gene (1), per trait (2, stub),
   Metropolis (3), bounded (4)
 - **Solvers**: GA (0), GA + Rechenberg 1/5-rule mutation adaptation (1),
-  DE (2, stub)
+  DE/rand/1/bin (2)
 
 `RunState` carries generation counters, timing, and best-fit tracking, so
 operators that need run context (Metropolis temperature, Rechenberg counter,
 bounded-step shrinkage) read it from one place instead of reaching into
 physics config objects.
+
+DE is also available decoupled from `BaseSolver`'s own generation loop, as
+`Solvers.de.differential_evolution_step(population, F, CR)` — a physics
+module that owns its own top-level loop (EXAFS's `ExafsNeo.run()`) calls
+this directly, per generation, against its own population object, rather
+than duplicating the DE math or handing its loop over to `DESolver.run()`.
+The function only needs `population.problem` (`.space.clip`, `.fitness`),
+`population.population` (a list of individuals exposing `.genes`),
+`population.eval_population(replace, sorting)`, and
+`population.generate_individual()` — both `Solvers.core.Population` and
+EXAFS's `NeoPopulations` satisfy this without adapters.
 
 ### Module anatomy (the contract)
 
@@ -131,12 +142,16 @@ Every module under `PhysicsModules/<Name>/` provides:
 The original public API was kept intact: same `exafs_neo` CLI, same `.ini`
 keys, same test suite (verified identical pass/fail against the pre-refactor
 baseline). The operator modules (`neoSelector`, `neoCrossOver`, `neoMutator`,
-`neoSolver`) are now thin shims delegating to `Solvers.ga`, preserving pinned
-quirks (e.g. `mutOpt == mut_options + 1`, exact label strings, Rechenberg
-writing `mutPars.mutChance`). `NeoRunStateView` adapts `NeoPars` bookkeeping
-to the `RunState` interface so generic operators see live EXAFS state.
-EXAFS's `Individual` subclasses the Solvers individual over the flat genome
-while keeping the historical path-oriented accessors.
+`neoSolver`) are now thin shims delegating to `Solvers.ga`/`Solvers.de`,
+preserving pinned quirks (e.g. `mutOpt == mut_options + 1`, exact label
+strings, Rechenberg writing `mutPars.mutChance`). `NeoRunStateView` adapts
+`NeoPars` bookkeeping to the `RunState` interface so generic operators see
+live EXAFS state. EXAFS's `Individual` subclasses the Solvers individual
+over the flat genome while keeping the historical path-oriented accessors.
+`solOpt == 2` (`NeoSolver_DE`, previously an unimplemented stub matching
+upstream EXAFS_Neo) now delegates to `Solvers.de.differential_evolution_step`
+directly against `NeoPopulations` — the first of the three EXAFS solver
+options to run actual differential evolution rather than a no-op.
 
 ### NanoIndentation (functional; clean re-port)
 

@@ -18,15 +18,21 @@ authors = [
 ]
 
 
+# Base install (Solvers only): numpy. Each physics module's own third-party
+# dependencies are optional extras below, so installing one module doesn't
+# force the others' (e.g. NanoIndentation shouldn't need xraylarch or numba).
+# See README.md "Installing a single module" for the per-module commands.
 dependencies = [
     "numpy",
-    "scipy",
-    "xraylarch",
-    "attrs",
-    "matplotlib",
-    "numba",
-    "psutil",
 ]
+
+[project.optional-dependencies]
+exafs = ["xraylarch", "scipy", "attrs", "matplotlib", "psutil"]
+# NanoIndentation's core fit needs only numpy (already in dependencies);
+# matplotlib is for the optional printGraph output.
+nanoindentation = ["matplotlib"]
+xps = ["scipy", "numba", "matplotlib", "psutil"]
+all = ["exafs_neo[exafs,nanoindentation,xps]"]
 
 [project.urls]
 Homepage = "https://github.com/laumiulun/EXAFS_Neo"

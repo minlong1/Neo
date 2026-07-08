@@ -33,8 +33,8 @@ parameters per generation), and `<output>.log`.
 
 GUI: `xps_neo_gui` (requires tkinter). It builds INI files from form fields
 and launches the installed `xps_neo` CLI as a subprocess — if you edit
-`xps_neo/` during development, reinstall with `pip install -e .` from the
-repo root or the GUI will keep running the old code.
+`xps_neo/` during development, reinstall with `pip install -e ".[xps]"` from
+the repo root or the GUI will keep running the old code.
 
 ## Layout
 
@@ -88,7 +88,7 @@ with the code, rather than rewritten, so the bit-exact golden-master
 discipline they encode carries over intact. From `PhysicsModules/XPS/`:
 
 ```bash
-pip install -e ../.. -r requirements-dev.txt   # from repo root: pip install -e . -r PhysicsModules/XPS/requirements-dev.txt
+pip install -e "../..[xps]" -r requirements-dev.txt   # from repo root: pip install -e ".[xps]" -r PhysicsModules/XPS/requirements-dev.txt
 pytest -m "not golden" -q     # unit + component tests (~2 s)
 pytest -m golden -q           # golden-master matrix, runs the CLI per case (~1 min)
 ```

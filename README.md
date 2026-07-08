@@ -12,7 +12,7 @@ implementing a small problem interface.
     │   ├── core/                 # ParameterSpace, Individual, Population,
     │   │                         #   OptimizationProblem, BaseSolver, ...
     │   ├── ga/                   # Genetic Algorithm (+ Rechenberg variant)
-    │   ├── de/                   # Differential Evolution (stub)
+    │   ├── de/                   # Differential Evolution (DE/rand/1/bin)
     │   └── tests/
     ├── PhysicsModules/
     │   ├── EXAFS/                # EXAFS Neo — fully supported
@@ -40,6 +40,43 @@ is a heterogeneous, type-tagged list, not a fixed-width float vector; see
 [PhysicsModules/XPS/README.md](PhysicsModules/XPS/README.md) for why and for
 its (pytest-based) test suite.
 
+## Installing a single module
+
+Each physics module's third-party dependencies are an optional extra, so
+installing one doesn't drag in the others' (NanoIndentation shouldn't need
+`xraylarch`, and neither should need `numba`). The bare install (no extras)
+gets you `Solvers` alone — no physics, `numpy` only.
+
+From the repository root:
+
+```bash
+# Solvers only (e.g. developing/using the optimization framework directly)
+pip install -e .
+
+# EXAFS: adds xraylarch, scipy, attrs, matplotlib, psutil
+pip install -e ".[exafs]"
+exafs_neo -i <your_exafs_input.ini>
+exafs_neo_gui
+
+# NanoIndentation: adds matplotlib (only needed for printGraph = True;
+# the core fit runs on numpy alone)
+pip install -e ".[nanoindentation]"
+nano_neo -i <your_nanoindent_input.ini>
+
+# XPS: adds scipy, numba, matplotlib, psutil
+pip install -e ".[xps]"
+xps_neo -i <your_xps_input.ini>
+xps_neo_gui
+
+# Everything (all three modules' extras at once)
+pip install -e ".[all]"
+```
+
+Extras are additive — installing a second module's extra doesn't uninstall
+the first's. Each module's own README has more detail (input file format,
+GUI notes, test commands): `PhysicsModules/EXAFS/README.md`,
+`PhysicsModules/NanoIndentation/README.md`, `PhysicsModules/XPS/README.md`.
+
 ## The Solvers contract
 
 A physics module exposes its fitting task by subclassing
@@ -54,9 +91,12 @@ solver = get_solver("GA")(problem, options={"nPops": 100, "nGen": 100})
 result = solver.run()
 ```
 
-Available solvers: `GA`, `GA_Rechenberg`, `DE` (stub). New solvers are added
+Available solvers: `GA`, `GA_Rechenberg`, `DE`. New solvers are added
 under `Solvers/` and registered in `Solvers/__init__.py` — physics modules
-pick them up without code changes.
+pick them up without code changes. `Solvers.de` also exposes
+`differential_evolution_step(population, F, CR)` as a standalone function,
+for physics modules (like EXAFS) that run their own generation loop and
+call it per-generation rather than handing control to a `BaseSolver`.
 
 ## Running tests
 

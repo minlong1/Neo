@@ -41,7 +41,7 @@ Equivalent: `PhysicsModules/EXAFS/run_tests`. Single test:
 ```
 cd PhysicsModules/EXAFS && python -m unittest PhysicsModules.EXAFS.tests.test_neosolver -v   # needs repo root on sys.path, e.g. PYTHONPATH=../..
 ```
-Known baseline: the 5 tests in `test_EXAFS_analysis.py` error (broken data paths, pre-existing). Everything else passes.
+All 90 tests pass with zero errors. (`test_EXAFS_analysis.py`'s 5 tests previously errored on a missing fixture directory, `tests/cu_test_files/cu_results/`, that had never been committed — fixed by generating and committing a real GA-run fixture and updating the pinned expected values to match; see `design.md` "Verification strategy".)
 
 NanoIndentation tests (numpy-only; synthetic data, no instrument files needed):
 ```

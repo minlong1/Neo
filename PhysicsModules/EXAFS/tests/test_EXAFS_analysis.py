@@ -1,5 +1,14 @@
 """
 Unit test for EXAFS Analysis
+
+The fixture read by these tests, tests/cu_test_files/cu_results/run1_data.csv,
+is real GA output (13-path fit against tests/cu_test_files/cu_paths/cu_10k.xmu,
+solOpt=0, nPops=60, 14 generations completed) — it was missing from the repo
+entirely (read_result_files silently failed with an UnboundLocalError on the
+missing directory; see EXAFS_Analysis.py's FileNotFoundError guard). The
+expected values below are pinned to that checked-in fixture (a
+characterization test): regenerating the fixture from a different GA run
+requires updating them to match.
 """
 import sys
 import larch
@@ -41,19 +50,19 @@ class TestCase(unittest.TestCase):
         """
         TestCase.Test_Result.extract_data(verbose=False)
         test_result = TestCase.Test_Result.bestFit_mat
-        real_result = np.array([[0.95, 0.13, 0.004, -0.02],
-                                [0.92, 0.13, 0.006, -0.03],
-                                [0.55, 0.13, 0.002, -0.],
-                                [0.84, 0.13, 0.004, -0.01],
-                                [0.88, 0.13, 0.005, 0.06],
-                                [0.55, 0.13, 0.005, 0.04],
-                                [0.95, 0.13, 0.011, -0.06],
-                                [0.35, 0.13, 0.001, 0.01],
-                                [0.22, 0.13, 0.008, -0.07],
-                                [0.95, 0.13, 0.006, -0.09],
-                                [0.66, 0.13, 0.001, -0.06],
-                                [0.75, 0.13, 0.001, 0.01],
-                                [0.85, 0.13, 0.004, -0.08]])
+        real_result = np.array([[0.76, 0.03, 0.002, -0.02],
+                                [0.22, 0.03, 0.005, 0.01],
+                                [0.38, 0.03, 0.013, -0.05],
+                                [0.86, 0.03, 0.001, 0.],
+                                [0.54, 0.03, 0.008, 0.01],
+                                [0.62, 0.03, 0.009, -0.05],
+                                [0.94, 0.03, 0.013, 0.09],
+                                [0.90, 0.03, 0.012, 0.09],
+                                [0.82, 0.03, 0.001, 0.07],
+                                [0.71, 0.03, 0.006, 0.06],
+                                [0.53, 0.03, 0.011, -0.08],
+                                [0.06, 0.03, 0.008, 0.10],
+                                [0.50, 0.03, 0.006, 0.05]])
 
         self.assertTrue(np.allclose(test_result, real_result))
 
@@ -67,8 +76,8 @@ class TestCase(unittest.TestCase):
         Chi2 = np.round(TestCase.Test_Result.loss, 5)
         Chir2 = TestCase.Test_Result.chir2
 
-        self.assertAlmostEqual(Chi2, 52.562, 3)
-        self.assertAlmostEqual(Chir2, 0.326471, 3)
+        self.assertAlmostEqual(Chi2, 707.70957, 3)
+        self.assertAlmostEqual(Chir2, 4.395712, 3)
 
     def test_bestFit_r(self):
         """Test best fit R data value
@@ -82,9 +91,10 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(best_Fit_r), 13)
         best_Fit_r_1 = best_Fit_r[0]
         # S02
-        self.assertAlmostEqual(best_Fit_r_1[0], 0.95, 3)
-        self.assertAlmostEqual(best_Fit_r_1[1], 0.13,3)
-        self.assertAlmostEqual(best_Fit_r_1[2], 0.004,3)
+        self.assertAlmostEqual(best_Fit_r_1[0], 0.76, 3)
+        self.assertAlmostEqual(best_Fit_r_1[1], 0.03,3)
+        self.assertAlmostEqual(best_Fit_r_1[2], 0.002,3)
+        # Kmin/Kmax/kweight - fixed by `params`, not by the GA fit.
         self.assertAlmostEqual(best_Fit_r_1[3], 2.5327,4)
         self.assertAlmostEqual(best_Fit_r_1[4], 12.0,3)
         self.assertAlmostEqual(best_Fit_r_1[5], 2.0,3)

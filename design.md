@@ -259,9 +259,22 @@ bit-exact regression discipline intact.
   (convergence on `sum((x - target)^2)`), with no physics installed.
 - EXAFS parity was established by running the full suite from the
   pre-refactor commit and after the refactor in the same larch environment:
-  identical results (89 tests; 5 pre-existing `test_EXAFS_analysis` errors),
-  plus an end-to-end GA run on the bundled Cu data producing comparable
-  fitness trajectories.
+  identical results (89 tests; 5 pre-existing `test_EXAFS_analysis` errors —
+  since fixed, see below), plus an end-to-end GA run on the bundled Cu data
+  producing comparable fitness trajectories.
+- `test_EXAFS_analysis.py`'s 5 tests were failing with an `UnboundLocalError`
+  in `EXAFS_Analysis.read_result_files`: the fixture directory the test
+  pointed at, `tests/cu_test_files/cu_results/`, had never been committed
+  (predates the Neo refactor), so the "no directory found" fallback path hit
+  a missing-files case the function didn't handle, leaving `best_full_mat`
+  unassigned at `return`. Fixed by (1) generating a real fixture — an actual
+  13-path GA run's `_data.csv` output — and committing it (`.gitignore` had
+  the same blanket-`*.csv` problem as XPS's fixtures; same negation-pattern
+  fix), (2) updating the test's hardcoded expected values to match that
+  fixture's real (deterministic, since the fixture is static) output, and
+  (3) making `read_result_files` raise a clear `FileNotFoundError` instead
+  of silently producing an unbound variable if a future fixture goes
+  missing again. All 90 EXAFS tests pass with zero errors.
 - NanoIndentation is verified against synthetic Oliver-Pharr curves with
   known ground truth (recovered within grid tolerance), plus an end-to-end
   `.ini` → outputs run for every mutation option.

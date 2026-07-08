@@ -131,6 +131,7 @@ class EXAFS_Analysis:
     ):
         num_path = self.num_paths
         full_mat = []
+        best_full_mat = None
         files = []
         folder = self.dirs
 
@@ -197,6 +198,11 @@ class EXAFS_Analysis:
                 print(" " + str(i) + " Missing")
                 pass
 
+        if best_full_mat is None:
+            raise FileNotFoundError(
+                f"No *_data.csv result files found under {folder!r} "
+                f"(dir exists: {os.path.isdir(folder)}, matched {len(files)} file(s))"
+            )
         return full_mat, best_full_mat
 
     def extract_data(

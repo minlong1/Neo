@@ -52,6 +52,9 @@ PhysicsModules/EXAFS/path_files/
 !PhysicsModules/XPS/requirements-dev.txt
 !PhysicsModules/XPS/tests/golden/expected/**/*.txt
 !PhysicsModules/XPS/tests/golden/expected/**/*.csv
+# EXAFS analysis test fixture: real GA output test_EXAFS_analysis.py reads
+# to exercise read_result_files/construct_bestfit_mat/larch_score.
+!PhysicsModules/EXAFS/tests/cu_test_files/cu_results/*_data.csv
 global_analysis/
 Data/
 docs/

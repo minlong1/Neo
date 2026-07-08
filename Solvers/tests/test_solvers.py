@@ -68,11 +68,46 @@ class TestGARechenberg(unittest.TestCase):
 
 
 class TestDESolver(unittest.TestCase):
-    def test_stub_raises(self):
+    def test_converges_on_quadratic(self):
+        np.random.seed(4)
         problem = QuadraticProblem()
-        solver = DESolver(problem, options={"nPops": 10, "nGen": 5})
-        with self.assertRaises(NotImplementedError):
-            solver.run()
+        solver = DESolver(problem, options={"nPops": 40, "nGen": 40})
+        result = solver.run()
+
+        initial = result.historyBest[0]
+        final = result.historyBest[-1]
+        self.assertLess(final, initial)
+        self.assertLess(final, 0.05)
+        self.assertEqual(len(result.historyBest), 40)
+
+    def test_history_monotonic_nonincreasing(self):
+        np.random.seed(5)
+        problem = QuadraticProblem()
+        result = DESolver(problem, options={"nPops": 20, "nGen": 15}).run()
+        for prev, curr in zip(result.historyBest, result.historyBest[1:]):
+            self.assertLessEqual(curr, prev)
+
+    def test_hooks_fire(self):
+        np.random.seed(6)
+        problem = QuadraticProblem()
+        DESolver(problem, options={"nPops": 10, "nGen": 5}).run()
+        self.assertEqual(problem.generation_end_calls, 5)
+        self.assertEqual(problem.run_end_calls, 1)
+
+    def test_trial_genes_stay_in_bounds(self):
+        np.random.seed(7)
+        problem = QuadraticProblem()
+        solver = DESolver(problem, options={"nPops": 10, "nGen": 10, "F": 1.5})
+        result = solver.run()
+        for i in range(len(result.best_individual.genes)):
+            low, high = problem.space.limits(i)
+            self.assertGreaterEqual(result.best_individual.genes[i], low)
+            self.assertLessEqual(result.best_individual.genes[i], high)
+
+    def test_requires_at_least_four_individuals(self):
+        problem = QuadraticProblem()
+        with self.assertRaises(ValueError):
+            DESolver(problem, options={"nPops": 3, "nGen": 5})
 
 
 if __name__ == "__main__":

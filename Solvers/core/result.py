@@ -28,6 +28,7 @@ class SolverResult:
     def load(cls, filename: str) -> "SolverResult":
         with open(filename, "rb") as file:
             return pickle.load(file)
+        return None
 
     def __str__(self) -> str:
         if self.best_individual is None:

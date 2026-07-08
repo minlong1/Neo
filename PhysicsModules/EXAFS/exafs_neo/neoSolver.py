@@ -4,6 +4,7 @@ adaptive-mutation rule live in Solvers; this module adapts them to the
 historical EXAFS API (initialize(exafs_pars) / solve(pops, selector, ...)).
 """
 
+from Solvers.de import differential_evolution_step
 from Solvers.ga.ga_solver import rechenberg_update
 
 from PhysicsModules.EXAFS.exafs_neo.neoPars import NeoPars
@@ -82,16 +83,23 @@ class NeoSolver_GA_Rechenberg(NeoSolverBase):
 
 class NeoSolver_DE(NeoSolverBase):
     """
-    Differential Evolution (see Solvers.de for the standalone DE solver)
+    Differential Evolution. The algorithm itself is
+    Solvers.de.differential_evolution_step; NeoPopulations already exposes
+    the .problem/.generate_individual()/.eval_population() surface that
+    function needs, so no EXAFS-specific DE math lives here. selector,
+    crossover, and mutator are accepted for interface parity with the GA
+    solvers but unused - DE has its own mutation/crossover built in.
     """
 
     def __init__(self, exafs_pars, logger):
         super().__init__(exafs_pars, logger)
         self.solver_type = 2
         self.solver_operator = "Differential Evolution"
+        self.F = 0.5
+        self.CR = 0.9
 
     def solve(self, pops, selector, crossover, mutator, exafs_pars):
-        pass
+        differential_evolution_step(pops, F=self.F, CR=self.CR)
 
 
 class NeoSolver:

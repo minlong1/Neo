@@ -4,6 +4,11 @@ Parameter space abstraction for population-based solvers.
 A genome is a flat vector of genes. Each gene draws its values from a
 GeneRange: a discrete, ordered set of allowed values (mirroring how the
 physics modules define fitting-parameter grids, e.g. EXAFS path ranges).
+
+ContinuousGeneRange is a sibling for genes that aren't naturally a
+discrete grid — e.g. neural-network weights/biases (Solvers.demcmc), which
+are drawn from a continuous initialization distribution (He/Xavier-style)
+rather than enumerated candidate values.
 """
 
 from typing import List, Optional, Sequence
@@ -45,6 +50,50 @@ class GeneRange:
     def __repr__(self) -> str:
         label = f" {self.name!r}" if self.name else ""
         return f"GeneRange({label} [{self.low}, {self.high}], n={len(self)})"
+
+
+class ContinuousGeneRange(GeneRange):
+    """A gene drawn from a continuous distribution rather than a discrete
+    grid: sampled from N(mean, std^2) and optionally soft-bounded to
+    [low, high] (default unbounded). Does not call GeneRange.__init__ (no
+    `values` array to materialize) but implements the same interface, so it
+    slots into ParameterSpace/clip/sample unchanged.
+    """
+
+    def __init__(
+        self,
+        mean: float = 0.0,
+        std: float = 1.0,
+        low: float = -np.inf,
+        high: float = np.inf,
+        name: str = "",
+    ):
+        self.mean = float(mean)
+        self.std = float(std)
+        self._low = float(low)
+        self._high = float(high)
+        self.name = name
+
+    @property
+    def low(self) -> float:
+        return self._low
+
+    @property
+    def high(self) -> float:
+        return self._high
+
+    def sample(self) -> float:
+        return self.clip(np.random.normal(self.mean, self.std))
+
+    def clip(self, value: float) -> float:
+        return float(np.clip(value, self._low, self._high))
+
+    def __len__(self) -> int:
+        return 0  # no discrete grid to count
+
+    def __repr__(self) -> str:
+        label = f" {self.name!r}" if self.name else ""
+        return f"ContinuousGeneRange({label} N({self.mean}, {self.std}^2))"
 
 
 class ParameterSpace:

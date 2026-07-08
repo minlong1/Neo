@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 NEO is a modular scientific computing framework:
 
-- `Solvers/` — physics-agnostic optimization algorithms (numpy-only; **must never import larch or any physics module**). `core/` holds the framework (`ParameterSpace`/`GeneRange`, `Individual`, `Population`, `OptimizationProblem`, `RunState`, `SolverResult`, `BaseSolver`); `ga/` the genetic algorithm operators and `GASolver`/`GARechenbergSolver`; `de/` Differential Evolution (DE/rand/1/bin) as both a `BaseSolver` (`DESolver`) and a standalone `differential_evolution_step(population, F, CR)` function physics modules can call per-generation directly. `Solvers/__init__.py` has the solver registry (`get_solver("GA")`, numeric IDs 0/1/2 preserved from historical `solOpt` values).
+- `Solvers/` — physics-agnostic optimization algorithms (numpy-only; **must never import larch or any physics module**). `core/` holds the framework (`ParameterSpace`/`GeneRange`/`ContinuousGeneRange`, `Individual`, `Population`, `OptimizationProblem`, `RunState`, `SolverResult`, `BaseSolver`); `ga/` the genetic algorithm operators and `GASolver`/`GARechenbergSolver`; `de/` Differential Evolution (DE/rand/1/bin) as both a `BaseSolver` (`DESolver`) and a standalone `differential_evolution_step(population, F, CR)` function physics modules can call per-generation directly; `demcmc/` DE-BNN (see below). `Solvers/__init__.py` has the solver registry (`get_solver("GA")`, numeric IDs 0/1/2 preserved from historical `solOpt` values; `DE_MCMC` is string-keyed only, no numeric ID).
 - `PhysicsModules/EXAFS/` — fits EXAFS spectra with a GA (needs xraylarch).
 - `PhysicsModules/NanoIndentation/` — Nano Neo: fits Oliver-Pharr power laws to nanoindentation unloading curves (numpy/matplotlib only). Ported from the standalone `nano_indent` package; its embedded GA was replaced by `Solvers`. Genome: `[A, hf, m] per path`, no shared genes. `nanoindentation_neo/gui/` is the legacy tkinter GUI, copied as-is and not wired to entry points.
 - `PhysicsModules/XPS/` — XPS Neo: fits XPS spectra (Voigt/Gaussian/Lorentzian/Double Lorentzian/Doniach-Sunjic peaks, Baseline/Linear/Shirley/SVSC/Tougaard backgrounds) with its own GA/DE, ported from the standalone `XPS_Neo` package. **Does not use `Solvers`** — its genome is a heterogeneous list of floats interleaved with peak/background type-name strings, not a fixed-width float vector; see `PhysicsModules/XPS/README.md` ("Why this module doesn't use Solvers") before trying to route it through `Solvers.core`. Tests are **pytest**, not `unittest` — a deliberate exception, kept to preserve its bit-exact golden-master suite as-is.
@@ -28,7 +28,7 @@ pip install -e ".[all]"       # every module's extra
 ```
 `xraylarch` is finicky — see `PhysicsModules/EXAFS/README.md` (conda/mamba recommended). See root `README.md` "Installing a single module" for the full per-module rundown.
 
-Solvers tests (fast, no larch needed):
+Solvers tests (fast, no larch needed; includes `test_demcmc.py` for DE-BNN):
 ```
 python -m unittest discover -s Solvers/tests -t . -v
 ```
@@ -73,6 +73,47 @@ The genome is a flat vector of genes; each gene samples from a discrete `GeneRan
 ### XPS module flow
 
 `input_arg.py` (CLI, argparse + `--seed`) → `parser2.py`/`ini_parser.py` (`.ini` → flat `config` dict via `load_config`) → `xps.py:main()` does `globals().update(config)` — `XPS_GA`'s methods deliberately read config as bare module globals of `xps.py` (a documented transitional seam carried over from the source project; don't "fix" a bare read into a `self.x`/`cfg.x` write, that changes mutation-sharing semantics for `addPeak`/`removePeak`). `XPS_GA.run()` drives the GA/DE loop directly (its own `next_generation`/`mutatePopulation`/`crossover`, or the DE path when `mutated_options == 3`) — no `Solvers` involvement; see `PhysicsModules/XPS/README.md` for why. `xps_individual.py:Individual.getFit` evaluates a candidate by summing `xps_fit.py` peak/background curves; `loss.py:compute_loss` is the one fitness function, shared with the GUI's post-analysis.
+
+### DE-BNN (`Solvers/demcmc/`)
+
+Differential evolution reinterpreted as an MCMC sampler for Bayesian neural
+network training (Forbes & Long, *Neurocomputing* 678 (2026) 133103). Not
+tied to any `PhysicsModules` — it's a general-purpose regression/BNN
+capability inside `Solvers`, per the paper's own conclusion ("future work…
+incorporate DE-MCMC and DE-BNN as an available solver in the NEO
+platform").
+
+- `mlp.py:MLPStructure` — numpy-only feedforward MLP; `flatten`/`unflatten`
+  keep the genome as one flat vector for DE while exposing per-layer
+  weight matrices for SVD refinement. `build_parameter_space()` uses
+  `ContinuousGeneRange` (He-normal init) — this is *why* `ContinuousGeneRange`
+  exists: `GeneRange` is a discrete grid, unsuitable for unbounded NN weights.
+- `bnn_problem.py:BNNRegressionProblem(OptimizationProblem)` — SSE fitness
+  over a training set; the reference "problem" for this solver.
+- `mutation.py` — `rand/1`, `rand/2`, `best/1`, `best/2` (paper Eq. 5-8)
+  plus `add_mcmc_noise` (Eq. 48, small Gaussian noise on the mutant for
+  detailed balance — this is what turns plain DE selection into a valid
+  MCMC acceptance step).
+- `hyper_mutation.py` — `StagnationTracker` (running-average residual) and
+  `sample_hyperparameters()` (Eq. 11, 12, 15); `DEMCMCSolver` resamples
+  F/CR/operator each generation while stagnant.
+- `refinement.py` — `svd_refine`/`local_search_refine` (Eq. 16-25), run
+  every `refine_every` generations, accepted only if they beat the
+  *population's* current best (not just the individual's), per the paper's
+  wording. `cluster_refine` (Section 3.6) is a documented
+  `NotImplementedError` stub — skipped to avoid a scikit-learn dependency
+  for one of three interchangeable refinement techniques.
+- `posterior.py:PosteriorResult` — collects the top `num_chains` candidates
+  per generation past `burn_in` as posterior samples; `.predict()` averages
+  forward passes over samples (Eq. 49-50, the statistically correct
+  predictive posterior — not a forward pass of averaged weights);
+  `.credible_interval()` for prediction bands; `.mean_genes()`/`.mode_genes()`
+  for point-estimate networks.
+- `demcmc_solver.py:DEMCMCSolver(BaseSolver)` ties it together; `.step()`
+  does one DE-MCMC generation, periodic refinement, then posterior
+  collection. Requires `nPops >= 6` (worst case: `best/2`/`rand/2` need 5
+  distinct donors), checked regardless of the configured default operator
+  since hyper-mutation can switch to any of the four mid-run.
 
 ### Adding a new solver
 

@@ -13,6 +13,7 @@ implementing a small problem interface.
     │   │                         #   OptimizationProblem, BaseSolver, ...
     │   ├── ga/                   # Genetic Algorithm (+ Rechenberg variant)
     │   ├── de/                   # Differential Evolution (DE/rand/1/bin)
+    │   ├── demcmc/                # DE-BNN: DE as an MCMC sampler for Bayesian NNs
     │   └── tests/
     ├── PhysicsModules/
     │   ├── EXAFS/                # EXAFS Neo — fully supported
@@ -91,12 +92,54 @@ solver = get_solver("GA")(problem, options={"nPops": 100, "nGen": 100})
 result = solver.run()
 ```
 
-Available solvers: `GA`, `GA_Rechenberg`, `DE`. New solvers are added
-under `Solvers/` and registered in `Solvers/__init__.py` — physics modules
-pick them up without code changes. `Solvers.de` also exposes
+Available solvers: `GA`, `GA_Rechenberg`, `DE`, `DE_MCMC`. New solvers are
+added under `Solvers/` and registered in `Solvers/__init__.py` — physics
+modules pick them up without code changes. `Solvers.de` also exposes
 `differential_evolution_step(population, F, CR)` as a standalone function,
 for physics modules (like EXAFS) that run their own generation loop and
 call it per-generation rather than handing control to a `BaseSolver`.
+
+### DE-BNN: Bayesian neural networks via DE-MCMC
+
+`Solvers.demcmc` implements DE-BNN (Forbes & Long, "DE-BNN: An
+evolutionary approach to Bayesian neural network posterior sampling",
+*Neurocomputing* 678 (2026) 133103): differential evolution reinterpreted
+as an MCMC sampler. DE's own selection rule (accept a trial if it scores
+better) already matches an MCMC acceptance step; with small Gaussian noise
+added to the mutant for detailed balance, the sequence of accepted
+candidates at each population index becomes a Markov chain, giving up to
+`nPops` chains "for free". Applied to training a neural network's weights
+and biases, the population of post-burn-in samples *is* the posterior
+distribution — used here for Bayesian regression with a mean prediction,
+credible interval, and a mode point estimate, rather than a single trained
+network.
+
+```python
+from Solvers.demcmc import BNNRegressionProblem, DEMCMCSolver
+
+problem = BNNRegressionProblem(layer_sizes=[7, 35, 10, 5, 1], X=X_train, y=y_train)
+solver = DEMCMCSolver(problem, options={
+    "nPops": 200, "nGen": 12000, "burn_in": 7000, "num_chains": 4,
+    "F": 0.5, "CR": 0.7, "mutation_operator": "rand/1",
+    "hyper_mutation": True, "svd": True, "local_search": True,
+})
+solver.run()
+
+mean_prediction, _ = solver.posterior.predict(problem, X_test)
+lo, hi = solver.posterior.credible_interval(problem, X_test, low=5, high=95)
+```
+
+Implemented from the paper: the base DE-MCMC loop with configurable
+mutation operator (`rand/1`, `rand/2`, `best/1`, `best/2`) and MCMC noise
+term (Section 2, Eq. 48); hyper-mutation, which resamples F/CR/operator
+when a running-average residual signals stagnation (Section 3.1-3.4); SVD
+and local-search refinement, run periodically and accepted only if they
+beat the population's current best (Section 3.5, 3.7); single- and
+multi-chain posterior collection and prediction (Section 5). **Not**
+implemented: clustering-based refinement (Section 3.6) — it would need a
+clustering dependency (e.g. scikit-learn) for one of three interchangeable
+refinement techniques; `Solvers.demcmc.cluster_refine` is a documented
+stub raising `NotImplementedError`.
 
 ## Running tests
 

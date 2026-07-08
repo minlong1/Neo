@@ -45,8 +45,9 @@ The goal of this design is a modular framework where:
 │  ga/    selectors · crossovers · mutators                │
 │         GASolver · GARechenbergSolver                    │
 │  de/    DESolver · differential_evolution_step()         │
+│  demcmc/ DEMCMCSolver — DE-BNN (Bayesian NN via DE-MCMC) │
 │                                                          │
-│  registry: get_solver("GA" | "GA_Rechenberg" | "DE")     │
+│  registry: get_solver("GA"|"GA_Rechenberg"|"DE"|"DE_MCMC")│
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -85,6 +86,13 @@ them within the space. Anything meaning-dependent (EXAFS's shared-E0
 mutation, its mid-run E0 grid sweep) belongs to the physics module, expressed
 through the problem hooks or module-level orchestration.
 
+Not every genome is a discrete grid, though: `Solvers.demcmc` (DE-BNN, see
+below) trains neural-network weights, which are continuous and unbounded
+(He/Xavier-style initialization). `ContinuousGeneRange` is the sibling to
+`GeneRange` for this case — same interface (`sample`/`clip`/`low`/`high`),
+sampled from `N(mean, std^2)` instead of a materialized value array — so
+`ParameterSpace` and every generic operator work unchanged.
+
 ### The solver side
 
 `BaseSolver` owns the run: initialize population → per generation call
@@ -116,6 +124,55 @@ The function only needs `population.problem` (`.space.clip`, `.fitness`),
 `population.eval_population(replace, sorting)`, and
 `population.generate_individual()` — both `Solvers.core.Population` and
 EXAFS's `NeoPopulations` satisfy this without adapters.
+
+### DE-BNN: differential evolution as MCMC (`Solvers/demcmc/`)
+
+Forbes & Long, "DE-BNN: An evolutionary approach to Bayesian neural
+network posterior sampling" (*Neurocomputing* 678 (2026) 133103), observe
+that DE's greedy selection (accept a trial if it scores better) is already
+an MCMC acceptance rule; adding small Gaussian noise to the mutant for
+detailed balance turns the sequence of accepted candidates at each
+population index into a Markov chain — DE gets `nPops` chains essentially
+for free. Applied to training a neural network, the population of
+post-burn-in samples *is* the posterior over weights/biases, enabling
+Bayesian prediction (mean + credible interval) instead of a single trained
+network. The paper's own conclusion names its intended home explicitly:
+"future work… incorporate DE-MCMC and DE-BNN as an available solver in the
+NEO platform" — i.e. this repository — which is why it lives in `Solvers/`
+as a new solver rather than a `PhysicsModules` domain application; DE-BNN
+is a general regression/training capability, not tied to a physics domain.
+
+Implemented, mapped to the paper's sections:
+- Base loop + configurable mutation operator (`rand/1`, `rand/2`, `best/1`,
+  `best/2`, Eq. 5-8) + MCMC noise term (Eq. 48) — `mutation.py`,
+  `demcmc_solver.py:de_mcmc_generation_step`.
+- Hyper-mutation (Section 3.1-3.4): a running-average-residual stagnation
+  detector resamples F/CR/operator (Eq. 11, 12, 15) while the search has
+  stopped improving — `hyper_mutation.py`.
+- SVD and local-search refinement (Section 3.5, 3.7, Eq. 16-25): run every
+  `refine_every` generations, keep a modified candidate only if it beats
+  the *population's* current best (the paper's stated criterion for both —
+  a deliberately strict bar, not "improves over its own previous value") —
+  `refinement.py`.
+- Single- and multi-chain posterior collection and prediction (Section 5):
+  `posterior.py:PosteriorResult` — `.predict()` averages forward passes
+  over posterior samples (Eq. 49-50: the statistically correct predictive
+  posterior, not a forward pass through averaged weights).
+
+Not implemented: clustering-based refinement (Section 3.6, k-means/
+spectral/agglomerative) — one of three interchangeable refinement
+techniques, deliberately skipped rather than pulling in a clustering
+dependency (e.g. scikit-learn) `Solvers` otherwise doesn't need.
+`cluster_refine` is a documented `NotImplementedError` stub, matching this
+repo's existing pattern for other intentionally-unimplemented variants
+(`TournamentSelector`, `DualPointCrossover`, `PerTraitMutator` in
+`Solvers/ga`).
+
+Verified against the paper's own worked example (a (7,35,10,5,1) MLP has
+701 parameters, Eq. 51-52) and end-to-end on synthetic sine regression:
+loss decreases, posterior samples collect at the expected count
+(`(nGen - burn_in) * num_chains`), and the predictive posterior mean
+tracks the true function with the credible interval covering it.
 
 ### Module anatomy (the contract)
 
@@ -219,3 +276,12 @@ bit-exact regression discipline intact.
   (numpy/numba/scipy version drift) — not a logic difference. 34 of 36 fast
   (non-golden) tests pass outright; the other 2 fail at the ~1e-14 relative
   level for the same reason.
+- DE-BNN (`Solvers/demcmc/`) is verified against the paper's own 701-
+  parameter worked example (dimension count only, Eq. 51-52) and 26 unit/
+  integration tests: MLP flatten/unflatten round-trips, all four mutation
+  operators run, the stagnation tracker correctly flags a flat vs.
+  improving fitness sequence, SVD/local-search refinement never worsen the
+  population's best score, and a full `DEMCMCSolver` run on synthetic sine
+  regression converges with posterior sample counts matching
+  `(nGen - burn_in) * num_chains` and a credible interval that brackets
+  the true function.

@@ -15,6 +15,7 @@ specific imports) — numpy only.
 
 from Solvers.core import (
     BaseSolver,
+    ContinuousGeneRange,
     GeneRange,
     Individual,
     OptimizationProblem,
@@ -25,12 +26,14 @@ from Solvers.core import (
 )
 from Solvers.ga import GASolver, GARechenbergSolver
 from Solvers.de import DESolver
+from Solvers.demcmc import DEMCMCSolver
 
 # Numeric IDs preserve the historical EXAFS solOpt/solver_type values.
 SOLVER_REGISTRY = {
     "GA": GASolver,
     "GA_RECHENBERG": GARechenbergSolver,
     "DE": DESolver,
+    "DE_MCMC": DEMCMCSolver,
     0: GASolver,
     1: GARechenbergSolver,
     2: DESolver,
@@ -50,6 +53,7 @@ def get_solver(name_or_id):
 
 __all__ = [
     "BaseSolver",
+    "ContinuousGeneRange",
     "GeneRange",
     "Individual",
     "OptimizationProblem",
@@ -60,6 +64,7 @@ __all__ = [
     "GASolver",
     "GARechenbergSolver",
     "DESolver",
+    "DEMCMCSolver",
     "SOLVER_REGISTRY",
     "get_solver",
 ]

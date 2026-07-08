@@ -8,6 +8,9 @@ from PhysicsModules.EXAFS.exafs_neo.utils import checkKey
 
 @define
 class NeoFilePars:
+    """Resolves input/output file paths and writes per-generation run/data
+    outputs (`.csv` fit history, `*_data.csv` best-fit parameters, `.log`)."""
+
     # Default base to the EXAFS package directory so relative data paths in the
     # test suite (e.g. "tests/cu_test_files/...") resolve correctly even when
     # tests are discovered from the repository root or another cwd.

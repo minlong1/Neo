@@ -31,6 +31,11 @@ def build_parameter_space(pathrange_pars: List) -> ParameterSpace:
 
 
 class Individual(SolverIndividual):
+    """A Solvers Individual over the shared-e0 genome (see module
+    docstring); adds get_path/set_path/get_e0/... accessors so EXAFS
+    fitness/path-optimization code can keep addressing genes by path
+    instead of by raw index."""
+
     def __init__(
         self,
         npaths: int,

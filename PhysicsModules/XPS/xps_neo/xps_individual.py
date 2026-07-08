@@ -9,6 +9,14 @@ import numpy as np
 import sys
 
 class Individual:
+    """One candidate XPS fit: a list of `peak`/`background` objects plus
+    their parameters. `get_params()` returns the heterogeneous genome —
+    floats interleaved with peak/background type-name string markers — that
+    `xps.py`'s own crossover/mutation walk directly (see
+    PhysicsModules/XPS/README.md "Why this module doesn't use Solvers").
+    Can also be built as a plain analysis container (`pars_range=''`) from
+    an existing fit result, with no ranges or RNG draws."""
+
     def __init__(self,backgrounds,peaks,scale_var,pars_range=''):
         """
         backgrounds (array) Array where each element is the name of the background type desired

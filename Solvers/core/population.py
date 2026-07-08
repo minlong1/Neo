@@ -12,6 +12,11 @@ from Solvers.core.run_state import RunState
 
 
 class Population:
+    """One generation of individuals, scored and sorted against a shared
+    OptimizationProblem. `population_sorted` (best first) is what GA/DE
+    operators read; `next_population` is the staging list selection fills
+    in before crossover/mutation replace `population` with it."""
+
     def __init__(self, problem: OptimizationProblem, state: RunState, n_pops: int = 100):
         self.problem = problem
         self.state = state

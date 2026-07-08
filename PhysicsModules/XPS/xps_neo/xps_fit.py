@@ -24,6 +24,12 @@ warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 #from pybaselines import Baseline, utils #Will have to have people install this in order to make it run
 
 class peak():
+    """One fittable XPS peak (Voigt/Gaussian/Lorentzian/Double Lorentzian/
+    Doniach-Sunjic; singlet, spin-orbit doublet, or Coster-Kronig), holding
+    its parameter ranges/guesses and the shape function selected by
+    `peakType` (`self.peakFunc`). See `__init__`'s docstring for the
+    free-vs-semi-free/correlated parameter model and how to add a new
+    peak type."""
 
     #Probably default these to -1 later as a test condition, but not yet sure
     def __init__(self,paramRange,peakType,is_singlet = 'is_singlet', is_coster_kronig = 'is_coster_kronig', BE_correlated = "BE_correlated", BE_correlated_mult = "BE_correlated_mult", sigma_correlated = "sigma_correlated", sigma_correlated_mult = "sigma_correlated_mult", gamma_correlated = "gamma_correlated", gamma_correlated_mult = "gamma_correlated_mult", amp_correlated = "amp_correlated", amp_correlated_mult = "amp_correlated_mult", asym_correlated = "asym_correlated", asym_correlated_mult = "asym_correlated_mult", sos_correlated = "sos_correlated", sos_correlated_mult = "sos_correlated_mult", br_correlated = "br_correlated", br_correlated_mult = "br_correlated_mult"):

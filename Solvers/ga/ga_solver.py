@@ -42,6 +42,10 @@ def rechenberg_update(curr_gen, diff_counter, glob_best_val, curr_best_val, mut_
 
 
 class GASolver(BaseSolver):
+    """Classic generational GA: select -> crossover -> mutate -> evaluate,
+    each stage a swappable operator chosen by numeric option ID (selOpt/
+    croOpt/mutOpt), preserving the physics modules' existing .ini semantics."""
+
     name = "GA"
 
     def __init__(self, problem, options=None, logger=None):

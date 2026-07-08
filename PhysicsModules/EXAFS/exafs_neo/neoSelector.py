@@ -10,6 +10,10 @@ from PhysicsModules.EXAFS.exafs_neo.utils import NeoLogger
 
 
 class NeoSelector:
+    """Back-compat shim preserving the historical `NeoSelector().initialize(exafs_pars)`
+    / `.select(pops)` API; delegates to a Solvers.ga selector chosen by
+    `selOpt`."""
+
     def __init__(self, logger=None):
         """
         Neo Selector

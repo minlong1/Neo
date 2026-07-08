@@ -27,6 +27,10 @@ OPERATOR_CHOICES = ["best/1", "best/2", "rand/1", "rand/2"]
 
 
 class StagnationTracker:
+    """Tracks a running-average residual over `window` generations and
+    flags stagnation when it's within `tol` of zero (see module docstring
+    for what "residual" means here)."""
+
     def __init__(self, window: int = 10, tol: float = 1e-9):
         self.window = window
         self.tol = tol

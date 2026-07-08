@@ -15,6 +15,10 @@ from Solvers.demcmc.mlp import MLPStructure, identity, relu
 
 
 class BNNRegressionProblem(OptimizationProblem):
+    """Reference DE-BNN problem: fits an MLPStructure's flattened weights
+    to (X, y) by minimizing SSE. The reference OptimizationProblem for
+    DEMCMCSolver."""
+
     name = "BNN"
 
     def __init__(

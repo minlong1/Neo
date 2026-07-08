@@ -34,6 +34,10 @@ def check_optional_key(og_dict, optional_key_list):
 
 @dataclass
 class InputParamsParser:
+    """Reads an EXAFS `.ini` file into `input_dict` (nested by section);
+    `export_input_dict` (below) flattens it into the single dict `NeoPars`
+    consumes."""
+
     input_dict: dict = field(default_factory=dict)
 
     def read_input_file(self, input_file, verbose=False):

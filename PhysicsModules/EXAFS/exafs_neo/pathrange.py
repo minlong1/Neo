@@ -17,6 +17,12 @@ import numpy as np
 
 
 class Pathrange_limits:
+    """Per-path gene grids (s02, sigma2, deltaR — E0 is shared across paths
+    elsewhere) and their min/max/step; one instance per FEFF path, built
+    either from the hardcoded defaults below or a `pathrange_file` (see
+    `read_pathrange_file`). `mod_*` narrows a range around a given best-fit
+    value for path re-optimization."""
+
     # class hidden variable
     _tol = 1e-13
 

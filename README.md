@@ -80,7 +80,8 @@ GUI notes, test commands): `PhysicsModules/EXAFS/README.md`,
 
 ## The Solvers contract
 
-A physics module exposes its fitting task by subclassing
+See [Solvers/README.md](Solvers/README.md) for the full package layout and
+per-solver details. In short: a physics module exposes its fitting task by subclassing
 `Solvers.core.OptimizationProblem` — a `ParameterSpace` describing the fit
 parameters plus a `fitness(genes)` function — and can then run any registered
 solver:

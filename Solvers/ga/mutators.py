@@ -16,6 +16,10 @@ from Solvers.core.population import Population
 
 
 class MutatorBase:
+    """Perturbs a population in place after crossover; subclasses implement
+    `mutate()`. `mut_chance` is a probability in [0, 1] (not the
+    percent-scaled convention some EXAFS mutation paths historically use)."""
+
     mutator_type = None
     mutType = "Base"
 

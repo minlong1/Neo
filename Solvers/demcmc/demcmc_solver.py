@@ -97,6 +97,12 @@ def de_mcmc_generation_step(population, F: float, CR: float, mutation_operator: 
 
 
 class DEMCMCSolver(BaseSolver):
+    """Ties one DE-MCMC generation, periodic SVD/local-search refinement,
+    and post-burn-in posterior collection into a single BaseSolver.
+    Requires nPops >= MIN_POPULATION (6) since hyper-mutation can switch
+    to best/2 or rand/2 mid-run regardless of the configured default
+    operator, and both need 5 distinct donors."""
+
     name = "DE_MCMC"
 
     def __init__(self, problem, options=None, logger=None):

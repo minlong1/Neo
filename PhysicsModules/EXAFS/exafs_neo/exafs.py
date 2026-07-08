@@ -16,6 +16,10 @@ from PhysicsModules.EXAFS.exafs_neo.neoSolver import NeoSolver
 
 
 class ExafsNeo:
+    """Top-level EXAFS run: `exafs_read` -> `exafs_setup` -> `run()`, owning
+    the generation loop (selection/crossover/mutation or DE per generation,
+    E0 optimization at the run's midpoint and end, result collection)."""
+
     def __init__(self, verbose_lvl: int = 5) -> None:
         """
         Initialize Params:

@@ -13,6 +13,11 @@ import numpy as np
 
 
 class NanoIndent_Data:
+    """Loads one load-displacement curve and slices out its unloading
+    segment. Usage: construct with a file path (auto-detects format via
+    `check_file_type`), then call `pre_processing(limits=...)`, which reads
+    the data if needed and populates `get_slice_data()`."""
+
     def __init__(self, file):
         self._file = file
         self._ptype = ["HYS", "IMICRO", "NAN"]

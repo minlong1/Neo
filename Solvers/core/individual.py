@@ -8,6 +8,10 @@ from Solvers.core.parameter_space import ParameterSpace
 
 
 class Individual:
+    """One genome: a flat gene vector bound to the ParameterSpace it was
+    drawn from, so mutation/clipping always resample within the right
+    GeneRange per position."""
+
     def __init__(self, space: ParameterSpace, genes: np.ndarray = None):
         self.space = space
         if genes is None:

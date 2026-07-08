@@ -42,6 +42,10 @@ class _DEMutatorStub:
 
 
 class NeoMutator:
+    """Back-compat shim preserving the historical `NeoMutator().initialize(exafs_pars)`
+    / `.mutate(pops)` API; delegates to a Solvers.ga mutator selected by
+    `mutOpt`, plus the EXAFS-specific second-half e0 mutation."""
+
     def __init__(self, logger=None):
         self.mutator = None
         self.logger = logger

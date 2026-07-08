@@ -13,6 +13,10 @@ from Solvers.core.population import Population
 
 
 class CrossoverBase:
+    """Breeds pairs drawn from `next_population` to refill the population
+    back to size; subclasses implement `crossover_pair()`, the per-gene
+    combination rule."""
+
     crossover_type = None
     croType = "Base"
 

@@ -21,7 +21,16 @@ Author: Alaina Humiston, Miu Lun Lau
 
 
 class XPS_GA:
-    
+    """XPS Neo's self-contained GA/DE driver: owns the heterogeneous-genome
+    population (see the module's own `individual.get_params()` layout —
+    floats interleaved with peak/background type-name strings), the
+    add/remove-peak logic, and the generation loop (`run`). Its methods
+    deliberately read fit configuration as bare globals of this module
+    (set once via `globals().update(config)` in `main()`), a documented
+    transitional seam carried over from the source project rather than an
+    oversight — see PhysicsModules/XPS/README.md "Why this module doesn't
+    use Solvers" for why it doesn't route through Solvers.core."""
+
     def initialize_params(self,verbose = False):
         """
         Initialize Parameters
@@ -484,6 +493,13 @@ class XPS_GA:
    
 
     def scanResidual(self): #Need to expand function to see if overfitting the data --> Reomve that peak
+        """
+        Residual-driven peak add/remove decision (part of `peak_add_remove`,
+        called from `run` when `data_peak_add` is enabled). See
+        PhysicsModules/XPS/README.md "Known limitations" — this path is
+        unusable from the CLI, crashing on the first added peak; kept as-is
+        per the port's no-fix-while-porting policy.
+        """
         #Function to analyze the residual to determine if we need to add/subtract a peak
         
         
@@ -636,9 +652,14 @@ class XPS_GA:
 
     #THIS FUNCTION IS ONLY WORKING FOR VOIGT RIGHT NOW. IMPROPER ADDITION OF THE NEW PARAMETERS WITH OTHER TYPES
     #Where do we call this function? --> Right now it is only functionable in generateFirstGen()
-    def addPeak(self, new_BE, new_amp): #New function to be called after so many generations (20?). Used before next generation is created. 
-        
-        
+    def addPeak(self, new_BE, new_amp): #New function to be called after so many generations (20?). Used before next generation is created.
+        """
+        Appends a new peak (binding energy, amplitude) to the fit's
+        parameter guesses/ranges. Part of the known-broken
+        `peak_add_remove` path (crashes on the first added peak) — see
+        `scanResidual`'s docstring.
+        """
+
         BE_guess.append(new_BE) #Want to use reisdual to determine where to add new peak?
         #Condition if the new peak trying to be added is too close to another peak --> Instead adjust amp of that peak
         #How to use reisudal to find these parameters? SOS? Br? etc. --> Take on same values as other peak but give a wider range?
@@ -868,10 +889,15 @@ class XPS_GA:
             'photoline' : photoline_select
         }
 
-    def removePeak(self): #Removing peak from array. Right now it just removes the last input --> Need to change that 
-        
-        
-        BE_guess.pop() 
+    def removePeak(self): #Removing peak from array. Right now it just removes the last input --> Need to change that
+        """
+        Drops the last peak's guesses/ranges (not necessarily the worst
+        one — see the TODO in the signature comment). Part of the
+        known-broken `peak_add_remove` path — see `scanResidual`'s
+        docstring.
+        """
+
+        BE_guess.pop()
       
         amp_guess.pop()
         sos_guess.pop()
@@ -1330,6 +1356,9 @@ class XPS_GA:
 
 
     def crossoverPopulation(self):
+        """DE crossover pass: builds `trialPopulations` by crossing each
+        mutated individual with its corresponding population member
+        (`crossoverDE`), used when `mutated_options == 3` (DE mode)."""
         self.trialPopulations = []
         for i in range(self.npops):
             self.trialPopulations.append(self.crossoverDE(self.mutated_Populations[i],self.Populations[i],self.cR))
@@ -1695,6 +1724,10 @@ class XPS_GA:
         self.logger.info("-------------------------------------------")
 
     def run(self, data_peak_add):
+        """Drives the full generation loop: evaluate -> select/crossover/
+        mutate (GA) or crossover/mutate/select (DE, `mutated_options == 3`)
+        -> re-evaluate -> log/write outputs, optionally scanning for
+        peak add/remove each generation when `data_peak_add` is set."""
         self.run_verbose_start()
         self.historic = []
         self.historic.append(self.Populations)
@@ -1812,6 +1845,8 @@ class XPS_GA:
         self.generateFirstGen()
 
 def main(argv=None):
+    """CLI entry point (`xps_neo`): parse args -> load/validate the .ini ->
+    build an XPS_GA and run it."""
     args = parse_args(argv)
     try:
         file_dict = load_file_dict(args)

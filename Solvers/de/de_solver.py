@@ -84,6 +84,10 @@ def differential_evolution_step(population, F: float = 0.5, CR: float = 0.9) -> 
 
 
 class DESolver(BaseSolver):
+    """BaseSolver wrapper around `differential_evolution_step` — for
+    physics modules that hand control to a solver's own run() loop rather
+    than driving DE per-generation themselves."""
+
     name = "DE"
 
     def __init__(self, problem, options=None, logger=None):

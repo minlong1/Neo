@@ -103,6 +103,10 @@ class NeoSolver_DE(NeoSolverBase):
 
 
 class NeoSolver:
+    """Back-compat shim preserving the historical `NeoSolver().initialize(exafs_pars)`
+    / `.solve(pops, selector, crossover, mutator, exafs_pars)` API; picks
+    the GA/GA_Rechenberg/DE solver class by `solOpt`."""
+
     def __init__(self, logger=None):
         """
         Neo Solver

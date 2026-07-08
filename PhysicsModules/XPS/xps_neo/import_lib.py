@@ -1,3 +1,11 @@
+"""
+Shared import bootstrap for xps.py: pulls in input_arg's parsed CLI state
+(including `timeing_mode`) via wildcard import, then times the remaining
+third-party imports if timing mode is on. Import-time side effects are
+intentional here (mirrors input_arg.py's own module-level argument
+parsing) rather than something to refactor away mid-port.
+"""
+
 # Import Library
 from PhysicsModules.XPS.xps_neo.input_arg import *
 from PhysicsModules.XPS.xps_neo.helper import timecall

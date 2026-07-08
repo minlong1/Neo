@@ -9,6 +9,10 @@ from Solvers.core.population import Population
 
 
 class SelectorBase:
+    """Splits a scored Population into survivors (top `nBest`) plus fresh
+    random arrivals (`nLucky`), leaving `nCross` slots for crossover to
+    fill back in. Subclasses implement `select()`."""
+
     selector_type = None
     selector_operator = "Base"
 

@@ -21,6 +21,10 @@ _CRO_TYPES = {
 
 
 class NeoCrossover:
+    """Back-compat shim preserving the historical `NeoCrossover().initialize(exafs_pars)`
+    / `.crossover(pops)` API; delegates the actual gene-mixing to a
+    Solvers.ga crossover operator selected by `croOpt`."""
+
     def __init__(self, logger=None):
         self.logger = logger
         self.exafs_pars = None

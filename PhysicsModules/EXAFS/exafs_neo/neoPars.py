@@ -24,6 +24,11 @@ from PhysicsModules.EXAFS.exafs_neo.utils import checkKey, time_call, Utils
 
 @define
 class NeoBestFit:
+    """Best-fit tracking: `curr*` is this generation's best, `glob*` is the
+    best seen across the whole run so far. `bestDiff` is the improvement of
+    `curr` over `glob` (zeroed below a 0.01 threshold; drives the
+    Rechenberg/Metropolis mutation schedules)."""
+
     currBestInd: float = None
     currBestVal: float = np.inf
     globBestInd: float = None
@@ -228,6 +233,11 @@ class NeoPars:
 
 @define
 class EXAFSPathRange:
+    """Per-path (s02, sigma2, deltaR) gene bounds (`pathrange_pars`, one
+    `Pathrange_limits` per FEFF path) plus the shared E0 grids
+    (`rangeE0`/`rangeE0_large`, the latter used by the mid-/end-of-run E0
+    sweep in `exafs_pop.py:optimize_e0`)."""
+
     pathrange_file: str = ""
     # factory (not a shared default) — a plain [] default would be shared
     # across every NeoPars instance in the process and grow on each run
@@ -263,6 +273,11 @@ class EXAFSPathRange:
 
 @define(slots=True)
 class EXAFSStaticPars:
+    """Fixed EXAFS analysis window (k-range, weighting, background removal)
+    that doesn't change generation to generation; `calculate_pars` derives
+    the index bounds (`small`/`big`/`mid`/`intervalK`) fitness uses to slice
+    the k-grid."""
+
     kmin: float = 0.95
     kmax: float = 9.775
     dk: float = 0.05
@@ -322,6 +337,11 @@ class EXAFSStaticPars:
 
 @define
 class EXAFSPath:
+    """Holds the larch groups (data, best-fit, sum) and per-path FEFF
+    dictionary that `exafs_pop.py:fitness` mutates and re-evaluates
+    (`path2chi`) each scoring call; `read_inputs`/`__initialize_paths` load
+    the FEFF path files once at setup."""
+
     mylarch: str = Interpreter()
     g: larch.symboltable.Group = None
     best: larch.symboltable.Group = None

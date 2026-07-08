@@ -8,6 +8,10 @@ from typing import List
 
 
 class SolverResult:
+    """Post-run summary: the best genome found and its per-generation
+    trajectory (`historyBest` is the running global best; `genBest` is that
+    generation's own best, which can be worse)."""
+
     def __init__(self):
         self.best_individual = None
         self.best_value: float = None

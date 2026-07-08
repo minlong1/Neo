@@ -12,6 +12,10 @@ from PhysicsModules.EXAFS.exafs_neo.exafs_pop import NeoPopulations
 
 @define
 class NeoResult:
+    """Per-generation history (best fitness, reduced chi-square) plus the
+    overall best individual; `collect()` is called once per generation from
+    `ExafsNeo.run()`."""
+
     exafs_pars: NeoPars = None
     best_individual: Individual = None
     historyBest: list[float] = field(factory=list)

@@ -42,6 +42,11 @@ _MUT_OPT_MAP = {
 
 
 class NanoNeo:
+    """Top-level Nano Neo run: read -> setup -> run, mirroring
+    ExafsNeo/XPS_GA's lifecycle. `nano_read` loads the .ini or a parameter
+    dict, `nano_setup` builds the NanoIndentationProblem and solver,
+    `run` drives the generation loop and writes per-generation outputs."""
+
     def __init__(self, verbose_lvl: int = 5):
         self.logger = NanoLogger()
         self.verbose_lvl = verbose_lvl

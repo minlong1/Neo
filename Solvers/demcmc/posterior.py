@@ -17,6 +17,9 @@ import numpy as np
 
 
 class PosteriorResult:
+    """Accumulated posterior samples (flat genomes) collected past
+    burn-in, plus prediction/summary methods over them."""
+
     def __init__(self):
         self.samples: List[np.ndarray] = []
 

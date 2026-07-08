@@ -13,6 +13,9 @@ from Solvers.core.run_state import RunState
 
 
 class BaseSolver(ABC):
+    """Owns initialization, the generation loop, result collection, and
+    problem-hook dispatch; a subclass only needs to implement `step()`."""
+
     name = "base"
 
     def __init__(self, problem: OptimizationProblem, options: Dict = None, logger=None):

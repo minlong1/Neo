@@ -66,6 +66,10 @@ class NeoRunStateView:
 
 
 class EXAFSProblem(OptimizationProblem):
+    """The EXAFS OptimizationProblem: scores a flat genome via the larch/
+    FEFF fitness in exafs_pop.py, and biases e0 sampling toward the
+    best-fit value once the run passes its midpoint (`secondHalf`)."""
+
     name = "EXAFS"
 
     def __init__(self, neo_pars):

@@ -59,6 +59,11 @@ def fitness(exafs_neo_pars, ind_obj, return_tot=False):
 
 @define
 class NeoPopulations:
+    """EXAFS's population container, scored via the module-level `fitness`
+    (larch path2chi + k-weighted residual). Exposes `.problem`/`.state` as
+    Solvers-facing views so generic `Solvers.ga`/`Solvers.de` operators can
+    run against it without knowing about larch or EXAFS paths."""
+
     exafs_NeoPars: NeoPars = None
     population: List = field(factory=list)
     population_sorted: List = field(factory=list)

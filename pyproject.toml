@@ -33,6 +33,10 @@ exafs = ["xraylarch", "scipy", "attrs", "matplotlib", "psutil"]
 nanoindentation = ["matplotlib"]
 xps = ["scipy", "numba", "matplotlib", "psutil"]
 all = ["exafs_neo[exafs,nanoindentation,xps]"]
+# AstroNeo has no extra here: its only third-party dependency is PyXspec
+# (ships with a HEASOFT source build, not on PyPI) plus the optional ACX2
+# local model (a separate personal/external package) -- see
+# PhysicsModules/AstroNeo/README.md for manual setup.
 
 [project.urls]
 Homepage = "https://github.com/laumiulun/EXAFS_Neo"
@@ -44,6 +48,7 @@ exafs_neo_gui = "PhysicsModules.EXAFS.exafs_neo.gui.XAFS_GUI:main"
 nano_neo = "PhysicsModules.NanoIndentation.nanoindentation_neo.input_arg:main"
 xps_neo = "PhysicsModules.XPS.xps_neo.xps:main"
 xps_neo_gui = "PhysicsModules.XPS.xps_neo.gui.xps_neo_gui:main"
+astro_neo = "PhysicsModules.AstroNeo.astro_neo.input_arg:main"
 
 [tool.setuptools]
 include-package-data = true

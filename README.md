@@ -18,7 +18,8 @@ implementing a small problem interface.
     ├── PhysicsModules/
     │   ├── EXAFS/                # EXAFS Neo — fully supported
     │   ├── NanoIndentation/      # Nano Neo — fully supported
-    │   └── XPS/                  # XPS Neo — fully supported (self-contained GA, see its README)
+    │   ├── XPS/                  # XPS Neo — fully supported (self-contained GA, see its README)
+    │   └── AstroNeo/             # Astro Neo — fits one X-ray spectral model via PyXspec (manual setup, see its README)
     ├── pyproject.toml
     └── README.md
 
@@ -40,6 +41,13 @@ keeps its own GA/DE loop rather than routing through `Solvers` — its genome
 is a heterogeneous, type-tagged list, not a fixed-width float vector; see
 [PhysicsModules/XPS/README.md](PhysicsModules/XPS/README.md) for why and for
 its (pytest-based) test suite.
+
+**AstroNeo** fits one X-ray CCD spectral model (absorbed powerlaw + two-
+temperature APEC plasma + ACX2 charge exchange) via [PyXspec](https://heasarc.gsfc.nasa.gov/xanadu/xspec/python/html/),
+scored by the Cash statistic. PyXspec ships with a HEASOFT source build, not
+pip/conda, so this module needs manual environment setup (and isn't
+installable via a `pyproject.toml` extra) — see
+[PhysicsModules/AstroNeo/README.md](PhysicsModules/AstroNeo/README.md).
 
 ## Installing a single module
 
@@ -158,8 +166,13 @@ From the repository root:
     # XPS (pytest, not unittest — see PhysicsModules/XPS/README.md)
     cd PhysicsModules/XPS && pytest -m "not golden" -q
 
+    # AstroNeo (numpy-only plumbing tests; the PyXspec-backed test skips
+    # itself unless PyXspec is importable — see PhysicsModules/AstroNeo/README.md)
+    python -m unittest discover -s PhysicsModules/AstroNeo/tests -t . -v
+
 Typical runs from the repository root:
 
     exafs_neo -i <your_exafs_input.ini>
     nano_neo -i <your_nanoindent_input.ini>
     xps_neo -i <your_xps_input.ini>
+    astro_neo -i <your_astro_input.ini>   # needs PyXspec set up manually, see its README

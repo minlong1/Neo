@@ -72,3 +72,9 @@ jobs:
       working-directory: PhysicsModules/XPS
       run: |
         pytest -m "not golden" -q
+    - name: Run AstroNeo tests
+      # PyXspec ships with a HEASOFT source build, not pip/conda — not
+      # installed in CI, so the PyXspec-gated live test skips itself; see
+      # PhysicsModules/AstroNeo/README.md.
+      run: |
+        python -m unittest discover -s PhysicsModules/AstroNeo/tests -t . -v

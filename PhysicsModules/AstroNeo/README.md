@@ -67,9 +67,11 @@ From the repository root, with the environment above active:
     astro_neo -i my_run.ini
 
 `.ini` sections: `[Inputs]` (`data_dir`, `data_file`, `output_file`,
-optional `bg_file`/`rsp_file` — accepted but not yet wired into the
-spectrum load, matching upstream — `acx2_path`, `xmin`/`xmax` ignore-range
-bounds in Angstrom), `[Populations]` (`population`, `num_gen`, optional
+optional `bg_file`/`rsp_file` — override the background/response `xspec.Spectrum()`
+loads; leave unset to use whatever `data_file`'s own FITS header
+(`BACKFILE`/`RESPFILE` keywords) already points at, which is PyXspec's
+default and is correct for a normally-grouped PHA file — `acx2_path`,
+`xmin`/`xmax` ignore-range bounds in Angstrom), `[Populations]` (`population`, `num_gen`, optional
 `best_sample`/`lucky_few`), `[Mutations]` (`solver_type` — 0 GA, 1 GA with
 Rechenberg, 2 DE, default DE — plus GA's `mutated_options`/
 `crossover_options`/`chance_of_mutation` or DE's `mutf`/`mutcr`),
@@ -108,9 +110,6 @@ one, e.g. for a manual local run:
 ## Known limitations (carried over from the source script)
 
 - The fitted model expression is fixed (see "Why the model is hardcoded").
-- `bg_file`/`rsp_file` are accepted in the `.ini` and threaded through to
-  `AstroNeoProblem`, but not yet passed to `xspec.Spectrum()` — the
-  original script had the same gap.
 - `model.py`'s `FIXED_PARAMS`/`FREE_PARAM_INDICES` were tuned against one
   specific instrument/source; reusing this module for a different target
   needs new fixed values and possibly a different free-parameter set.

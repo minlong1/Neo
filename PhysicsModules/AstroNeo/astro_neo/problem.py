@@ -53,10 +53,11 @@ class AstroNeoProblem(OptimizationProblem):
     ):
         self.data_dir = str(data_dir)
         self.data_file = data_file
-        # Accepted for forward-compatibility with the .ini schema; not yet
-        # wired into the Spectrum load below -- matches upstream, which
-        # threaded these through to init_process() but never passed them to
-        # xspec.Spectrum() either.
+        # None (unset) means "use whatever background/response the data
+        # file's own FITS header points at" -- xspec.Spectrum()'s default,
+        # passed through as its 'USE_DEFAULT' sentinel below. bg_file/
+        # rsp_file only need setting to *override* that with a different
+        # file than the header names.
         self.bg_file = bg_file
         self.rsp_file = rsp_file
         self.acx2_path = acx2_path
@@ -84,7 +85,11 @@ class AstroNeoProblem(OptimizationProblem):
         old_dir = os.getcwd()
         os.chdir(self.data_dir)
         try:
-            spectrum = xspec.Spectrum(self.data_file)
+            spectrum = xspec.Spectrum(
+                self.data_file,
+                backFile=self.bg_file or "USE_DEFAULT",
+                respFile=self.rsp_file or "USE_DEFAULT",
+            )
             # xLog must be set *before* .ignore(): the ignore-range string
             # below is parsed in whatever unit Plot.xAxis currently is, not
             # the unit it's later set to. Getting this order wrong silently

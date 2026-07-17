@@ -141,7 +141,14 @@ one, e.g. for a manual local run:
   called its per-worker spectrum-load function on every generation; its
   distributed/multiprocessing path loaded once per worker — this keeps the
   once-per-run behavior, since re-loading the same static spectrum
-  mid-run can't change the fit). The per-individual XSPEC `Model` object
-  itself is still rebuilt from scratch on every `fitness()` call, exactly
-  as the original did — not changed, since that's part of the ported
-  fitting behavior, not run setup.
+  mid-run can't change the fit).
+- The XSPEC `Model` object is also now built once per `AstroNeoProblem`
+  instance and reused across every `fitness()` call (`model.setPars(...)`
+  per evaluation, not a fresh `xspec.Model(...)` each time) — unlike the
+  spectrum-load fix above, this *does* diverge from the original, which
+  rebuilt the model from scratch per individual. That was ~25s/evaluation,
+  making any run at a practical population size (`nPops >= 100`)
+  impractically slow (hours-to-days); reusing the Model is PyXspec's
+  standard usage pattern (`Fit.statistic` is a live-recomputed property)
+  and safe here because every free parameter is set on every call, so
+  there's no stale-value carryover between generations.

@@ -64,6 +64,7 @@ class AstroNeoProblem(OptimizationProblem):
         self.xmax = xmax
 
         self._load_spectrum()
+        self.model = build_xspec_model()
         super().__init__(build_parameter_space())
 
     def _load_spectrum(self):
@@ -103,8 +104,12 @@ class AstroNeoProblem(OptimizationProblem):
         xspec.Fit.statMethod = "cstat"
 
     def fitness(self, genes) -> float:
+        # The Model is built once in __init__ and reused here -- PyXspec's
+        # standard usage pattern (build once, iterate setPars(), read the
+        # live-recomputed Fit.statistic). Every free parameter is set on
+        # every call (genes_to_xspec_params covers all of PARAM_NAMES), so
+        # there's no stale-value carryover between evaluations.
         import xspec
 
-        model = build_xspec_model()
-        model.setPars(genes_to_xspec_params(genes))
+        self.model.setPars(genes_to_xspec_params(genes))
         return float(xspec.Fit.statistic)

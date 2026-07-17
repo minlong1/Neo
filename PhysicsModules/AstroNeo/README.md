@@ -14,24 +14,67 @@ EXAFS and NanoIndentation.
 ## Layout
 
     astro_neo/
-    ├── model.py        # the one fitted model: expression, free-parameter bounds, fixed/linked params, build_xspec_model()
+    ├── model.py        # ModelSpec (expression + free/fixed/linked params by name), DEFAULT_MODEL_SPEC, build_xspec_model()
     ├── problem.py       # AstroNeoProblem — the Solvers plug-in point (loads the spectrum, scores genomes)
     ├── parser.py        # .ini parsing/validation
     ├── astro_neo.py      # AstroNeo runner: read -> setup -> run, logging + output files
     ├── input_arg.py      # CLI entry point (`astro_neo`)
     └── helper.py         # logger + banner (re-exports PhysicsModules.common)
 
-## Why the model is hardcoded
+## The default model, and fitting a different one
 
-Unlike EXAFS (any set of FEFF paths) or NanoIndentation (any number of
-Oliver-Pharr terms), this module fits exactly one XSPEC model expression —
-same as the original script. XSPEC's `Model.setPars(dict)` only accepts
-1-based positional parameter indices, not names, so `model.py`'s
-`FREE_PARAM_INDICES` and `FIXED_PARAMS` are tied to `MODEL_EXPR` exactly as
-written; changing the expression means regenerating both (e.g. via
-`model.show()` in a PyXspec session). Generalizing to an arbitrary
-user-supplied XSPEC model string is a real feature, not attempted here —
-if that's needed, it's the trigger to add it deliberately.
+`AstroNeoProblem` fits one `model.ModelSpec` at a time — an XSPEC model
+expression plus its free parameters (the fit genome), fixed/frozen
+parameter overrides, and any parameter links, all addressed by dotted
+`component.parameter` name (e.g. `"powerlaw.PhoIndex"`) rather than XSPEC's
+raw positional parameter index. `model.DEFAULT_MODEL_SPEC` — used unless
+you pass a different one — is the original ported model: an absorbed
+powerlaw plus a two-temperature APEC plasma and an ACX2 charge-exchange
+component,
+
+    TBabs(TBabs*powerlaw + lsmooth(vapec + vapec + zashift*vacx2))
+
+same expression, fixed values, links, and free-parameter set as the
+original script, just re-expressed by name.
+
+To fit a different model, construct a `ModelSpec` and pass it to
+`AstroNeoProblem(model_spec=...)`:
+
+```python
+from PhysicsModules.AstroNeo.astro_neo.model import ModelSpec
+from PhysicsModules.AstroNeo.astro_neo.problem import AstroNeoProblem
+
+custom_spec = ModelSpec(
+    expr="TBabs*powerlaw",
+    free_params=("powerlaw.PhoIndex", "powerlaw.norm"),
+    param_ranges={
+        "powerlaw.PhoIndex": (0.5, 3.0),
+        "powerlaw.norm": (1e-5, 1e-2),
+    },
+    fixed_params={"TBabs.nH": 0.0279},
+    # unfrozen=(...,)  # dotted names to explicitly .frozen = False
+    # links=(("target.param", "source.param"), ...)
+)
+problem = AstroNeoProblem(data_dir="...", data_file="spectrum.fits", model_spec=custom_spec)
+```
+
+Names, not indices, because indices are only meaningful for one specific
+expression (renumber if it changes at all) and can otherwise only be
+discovered by building the model and reading `model.show()` — fragile and
+opaque for defining a new spec. Every `xspec.Parameter` exposes its own
+`.index`, so `AstroNeoProblem.__init__` resolves `free_params` to indices
+once, up front; `fitness()` still uses `Model.setPars({index: value})`,
+XSPEC's fast bulk setter, every evaluation — resolving by name on *every*
+call instead measured ~14x slower in practice (bulk index-based setPars:
+~0.4s/eval; per-parameter name-based attribute sets: ~5.5s/eval), which
+would undo the point of building the `Model` once per problem instance
+(see "Differences from the original script" below). See `model.py`'s
+module docstring for the full mechanics.
+
+This is scoped to the Python API, not the `.ini` — a nested spec like this
+doesn't map cleanly onto flat `.ini` sections, and the `astro_neo` CLI's
+one job is running `DEFAULT_MODEL_SPEC` against a spectrum. A custom
+model is a notebook/script use case for now.
 
 ## Setup
 
@@ -113,10 +156,10 @@ one, e.g. for a manual local run:
 
 ## Known limitations (carried over from the source script)
 
-- The fitted model expression is fixed (see "Why the model is hardcoded").
-- `model.py`'s `FIXED_PARAMS`/`FREE_PARAM_INDICES` were tuned against one
-  specific instrument/source; reusing this module for a different target
-  needs new fixed values and possibly a different free-parameter set.
+- `DEFAULT_MODEL_SPEC`'s fixed/frozen values were tuned against one
+  specific instrument/source; fitting a different target with the same
+  model expression still means constructing a new `ModelSpec` with new
+  fixed values (see "The default model, and fitting a different one").
 - No bundled test spectrum ships with this repo (unlike EXAFS's committed
   `cu_test_files/`) — real `.fits` data plus a HEASOFT build are both
   personal-machine setup, so full runs can only be verified manually, not
@@ -155,3 +198,10 @@ one, e.g. for a manual local run:
   standard usage pattern (`Fit.statistic` is a live-recomputed property)
   and safe here because every free parameter is set on every call, so
   there's no stale-value carryover between generations.
+- The model is no longer a single hardcoded expression — `model.py`'s
+  `ModelSpec` generalizes it to any XSPEC expression, with parameters
+  addressed by dotted name instead of the original's raw positional
+  indices (see "The default model, and fitting a different one").
+  `DEFAULT_MODEL_SPEC` reproduces the original model exactly — same
+  expression, fixed values, links, and free-parameter set, verified to
+  give the identical `Fit.statistic` — just re-expressed by name.

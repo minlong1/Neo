@@ -107,7 +107,38 @@ class AstroNeo:
         solver.problem.on_run_end(solver.state, solver.population)
 
         self._run_verbose_end(solver)
+        if self.input_parameters.get("printGraph", False):
+            self.plot(solver.state.globBestInd)
         return solver.result
+
+    def plot(self, individual) -> None:
+        """Plot data vs. the fitted model for one individual (genes are the
+        model.PARAM_NAMES ordered free parameters)."""
+        import matplotlib.pyplot as plt
+        import xspec
+
+        # Sets self.problem.model's parameters to this individual's genes
+        # (fitness() is the only place that does so); the Plot() call below
+        # then reads XSPEC's current model state, so this must run first.
+        self.problem.fitness(individual.genes)
+
+        xspec.Plot.device = "/null"
+        xspec.Plot.xAxis = "angstrom"
+        xspec.Plot("data")
+        x = xspec.Plot.x()
+        y = xspec.Plot.y()
+        yerr = xspec.Plot.yErr()
+        model_y = xspec.Plot.model()
+        xlabel, ylabel, title = xspec.Plot.labels()
+
+        plt.figure()
+        plt.errorbar(x, y, yerr=yerr, fmt="o", markersize=2, label="data")
+        plt.plot(x, model_y, "r-", label="model")
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.legend()
+        plt.show()
 
     # ------------------------- internals -------------------------
 

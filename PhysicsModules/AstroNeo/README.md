@@ -78,7 +78,11 @@ Rechenberg, 2 DE, default DE — plus GA's `mutated_options`/
 `[Outputs]` (`print_graph`).
 
 Outputs (per generation) go to `output_file` (fit history), `*_data.csv`
-(best-fit parameters by name), and `*.log` (run log).
+(best-fit parameters by name), and `*.log` (run log). With `print_graph =
+True`, `run()` plots the global-best individual against the data at the
+end of the run (`AstroNeo.plot()`) — data with error bars vs. the folded
+model, over PyXspec's own `Plot("data")` arrays and axis labels (matplotlib,
+requires a display; not run under CI/headless verification).
 
 Programmatic use:
 

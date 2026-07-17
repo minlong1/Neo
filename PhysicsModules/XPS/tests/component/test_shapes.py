@@ -20,18 +20,28 @@ from conftest import load_xps_module  # noqa: E402
 
 REF_DIR = HERE / "references"
 
-# These two peak variants differ from their pinned-environment reference at
-# the ~1e-14/1e-17 level (numpy/numba/scipy version drift reordering float
-# ops - see PhysicsModules/XPS/README.md's "Environment note"), not a logic
-# regression: manually re-verified against the reference trajectory during
-# the original port. Compared with a tolerance instead of bit-exact so this
-# suite is green in this repo's default (non-pinned) environment; every
-# other peak/background variant stays bit-exact via assert_array_equal, so
-# an actual regression in these two would still fail (real breakage is
-# orders of magnitude above this tolerance).
+# These peak/background variants differ from their pinned-environment
+# reference at the ~1e-12/1e-14 level (numpy/numba/scipy version drift *and*
+# CPU-architecture float-op reordering - see PhysicsModules/XPS/README.md's
+# "Environment note"), not a logic regression. First observed for 2 peak
+# variants checked locally; GitHub Actions CI (x86_64 Linux, a different
+# architecture from local ARM64 checks) surfaced 5 more peak variants plus
+# one background variant the first time these tests actually ran there -
+# they'd always have failed the same way, just masked until then by an
+# unrelated collection error (missing numba). Compared with a tolerance
+# instead of bit-exact so this suite is green across environments/
+# architectures; an actual regression would still fail (real breakage is
+# orders of magnitude above this tolerance, and the remaining variants
+# below stay bit-exact via assert_array_equal).
 _FLOAT_DRIFT_TOLERANCE = {
     "double_lorentzian_coster_kronig": dict(atol=1e-10, rtol=1e-8),
     "lorentzian_singlet": dict(atol=1e-10, rtol=1e-8),
+    "doniach_sunjic_singlet": dict(atol=1e-10, rtol=1e-8),
+    "double_lorentzian_doublet": dict(atol=1e-10, rtol=1e-8),
+    "double_lorentzian_singlet": dict(atol=1e-10, rtol=1e-8),
+    "voigt_doublet": dict(atol=1e-10, rtol=1e-8),
+    "voigt_singlet": dict(atol=1e-10, rtol=1e-8),
+    "svsc": dict(atol=1e-10, rtol=1e-8),
 }
 
 
@@ -62,15 +72,15 @@ def test_peak_reference(xps_fit, name):
 def test_background_reference(xps_fit, name):
     ref = np.load(REF_DIR / f"bkgn_{name}.npy")
     y = shapes.eval_background(xps_fit, name)
-    np.testing.assert_array_equal(
-        y,
-        ref,
-        err_msg=(
-            f"background variant {name!r} no longer reproduces its reference "
-            f"curve; if intended, regenerate via generate_references.py and log "
-            f"the reason in tests/golden/CHANGELOG.md"
-        ),
+    err_msg = (
+        f"background variant {name!r} no longer reproduces its reference "
+        f"curve; if intended, regenerate via generate_references.py and log "
+        f"the reason in tests/golden/CHANGELOG.md"
     )
+    if name in _FLOAT_DRIFT_TOLERANCE:
+        np.testing.assert_allclose(y, ref, err_msg=err_msg, **_FLOAT_DRIFT_TOLERANCE[name])
+    else:
+        np.testing.assert_array_equal(y, ref, err_msg=err_msg)
 
 
 # ---------------------------------------------------------------- properties

@@ -100,16 +100,23 @@ Python 3.14). In this repo's default environment (numpy 1.26.4/numba
 verified during the port to be display/precision artifacts, not logic
 differences:
 
-- `tests/component/test_shapes.py::test_peak_reference` compares
-  `double_lorentzian_coster_kronig` and `lorentzian_singlet` with
-  `np.testing.assert_allclose` (`atol=1e-10, rtol=1e-8`) instead of
-  bit-exact `assert_array_equal` — in this environment they differ from
-  their pinned-environment reference at the ~1e-14 relative / ~1e-17
-  absolute level (numba/numpy float-op reordering between versions), well
-  inside that tolerance; a real regression would differ by orders of
-  magnitude more. Every other peak/background reference in that file
-  stays bit-exact. This is a deliberate, scoped exception to the
-  bit-exact-comparator rule below — see git history for why.
+- `tests/component/test_shapes.py`'s `_FLOAT_DRIFT_TOLERANCE` dict compares
+  a set of peak/background variants with `np.testing.assert_allclose`
+  (`atol=1e-10, rtol=1e-8`) instead of bit-exact `assert_array_equal` — in
+  a non-pinned environment they differ from their pinned-environment
+  reference at the ~1e-12 relative / ~1e-14 absolute level (numba/numpy
+  float-op reordering between versions *and*, per GitHub Actions CI,
+  between CPU architectures — x86_64 Linux runners vs. the ARM64 Mac this
+  was first checked on), well inside that tolerance; a real regression
+  would differ by orders of magnitude more. Started as 2 variants found
+  locally; CI surfaced 5 more peak variants plus one background variant
+  (`svsc`) the first time these tests actually ran there (previously
+  masked by an unrelated collection error — see git history). Only
+  `gaussian_singlet` and the `baseline`/`linear`/`shirley` backgrounds
+  stay bit-exact across every environment checked so far; everything else
+  in `_FLOAT_DRIFT_TOLERANCE` gets the tolerance. This is a deliberate,
+  reviewed exception to the bit-exact-comparator rule below — see git
+  history for why.
 - 5 of 9 golden cases fail: `assert text == expected` because numpy ≥2.0
   reprs scalars as `np.float64(1.23)` inside a printed list, where numpy
   1.26 prints plain `1.23` — plus, in the more numerically involved cases
@@ -126,10 +133,14 @@ differences:
 This is the environment-drift risk `design.md`'s own risk table anticipates
 ("numpy upgrade changes float behavior"). The general rule remains: don't
 touch a comparator just to make a diff pass (design.md: "Never adjust the
-comparator to make a diff pass") — the two component-test tolerances above
-are a narrow, explicitly-reviewed exception (exact variants, exact
-tolerance, everything else still bit-exact), not a precedent for loosening
-comparators elsewhere.
+comparator to make a diff pass") — the component-test tolerances above are
+a reviewed exception (named variants, one fixed tolerance value with
+multiple orders of magnitude of headroom over the observed drift, applied
+only where a real cross-environment run actually showed drift), not a
+precedent for loosening comparators elsewhere. The golden CLI matrix's own
+comparator is untouched, on purpose — it needs the pinned `constraints.txt`
+environment for a true signal, and is not run in CI's default environment
+(only `pytest -m "not golden"` is).
 
 ## Known limitations (carried over as-is)
 

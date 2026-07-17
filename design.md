@@ -24,11 +24,11 @@ The goal of this design is a modular framework where:
 ┌──────────────────────────────────────────────────────────┐
 │ PhysicsModules/                                          │
 │                                                          │
-│  EXAFS/          NanoIndentation/       XPS/*            │
-│  (larch, FEFF)   (Oliver-Pharr)      (own GA/DE loop)    │
-│      │                 │                                 │
-│      └────────┬────────┘                                 │
-│               ▼                                          │
+│  EXAFS/       NanoIndentation/     XPS/*      AstroNeo/  │
+│  (larch,FEFF) (Oliver-Pharr)    (own GA/DE)   (PyXspec)  │
+│  │            │                    │          │          │
+│  └────────────┴────────┬───────────┴──────────┘          │
+│                        ▼                                 │
 │    OptimizationProblem (the contract)                    │
 │    - space: ParameterSpace                               │
 │    - fitness(genes) -> float        (lower = better)     │
@@ -72,6 +72,7 @@ Physics modules define the genome layout and its meaning:
 | EXAFS           | `[e0, (s02, sigma2, deltaR) × npath]`      | e0           |
 | NanoIndentation | `[(A, hf, m) × npaths]`                    | none         |
 | XPS             | not a flat float vector — see below        | n/a          |
+| AstroNeo        | one gene per `ModelSpec.free_params` entry | none         |
 
 XPS's actual "genome" (`Individual.get_params()`) is a list of floats
 **interleaved with peak/background type-name strings** (`'Voigt'`,
@@ -239,6 +240,36 @@ test suite (pytest: unit, component/numerical, and golden-master) is
 likewise ported as-is rather than translated to `unittest`, to keep its
 bit-exact regression discipline intact.
 
+### AstroNeo (functional; clean re-port, own GA/selector/mutator dropped)
+
+Ported from a personal research script fitting X-ray CCD spectra via
+PyXspec, scored by the Cash statistic. Like NanoIndentation, this is a
+clean re-port with no API freeze — but unlike NanoIndentation's GA (a
+working fork of EXAFS's), the original's own GA/selector/crossover/mutator
+framework was dropped rather than shimmed onto `Solvers`: most of its
+crossover/mutation operators referenced an `Individual` API (`get_e0`,
+`get_path`, `exafsPathPars`) that never existed on this module's actual
+`Individual` — dead code, not historical behavior worth preserving. The
+fitted model is declared by `astro_neo/model.py:ModelSpec` — expression,
+free parameters addressed by dotted `component.parameter` name (e.g.
+`"powerlaw.PhoIndex"`, not XSPEC's raw positional index, since indices are
+only meaningful for one specific model expression), fixed/frozen
+overrides, and parameter links — with `model.DEFAULT_MODEL_SPEC` the
+original ported model, used unless `AstroNeoProblem(model_spec=...)` is
+given a different one. `AstroNeoProblem.__init__` resolves `free_params`
+names to XSPEC indices once; the hot path (`fitness()`, called every
+generation) uses the fast bulk `Model.setPars({index: value})`, since
+resolving by name on every call measured ~14x slower. Both the XSPEC
+`Model` and the loaded spectrum are built once per `AstroNeoProblem`
+instance and reused across the whole run, not rebuilt per individual —
+see `PhysicsModules/AstroNeo/README.md` ("Differences from the original
+script") for why that's safe here and how much it saves. PyXspec itself is
+not pip/conda-installable (a manual HEASOFT source build) and is imported
+lazily in `problem.py`/`model.py`, so the module's own non-PyXspec tests
+and the rest of the framework stay usable without it; the one PyXspec-
+backed test self-skips unless PyXspec is importable and a real spectrum is
+pointed to via environment variables (see the README's "Tests" section).
+
 ## Design rules
 
 1. `Solvers/` imports numpy only. A physics dependency appearing there is a
@@ -298,3 +329,9 @@ bit-exact regression discipline intact.
   regression converges with posterior sample counts matching
   `(nGen - burn_in) * num_chains` and a credible interval that brackets
   the true function.
+- AstroNeo's parser, `ModelSpec` name-to-index resolution, and path
+  resolvers are covered by pure-numpy/no-PyXspec unit tests, run in CI.
+  The PyXspec-backed fitness path (`TestAstroNeoProblemLive`) can only be
+  verified manually, against a real spectrum and a local HEASOFT build —
+  it self-skips in CI since neither is installable there; see
+  `PhysicsModules/AstroNeo/README.md` ("Known limitations", "Tests").

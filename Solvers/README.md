@@ -35,8 +35,9 @@ print(result.best_individual.genes, result.best_value)
 
 `get_solver` looks up a class by name (case-insensitive) or by the numeric
 `solOpt`/`solver_type` IDs EXAFS's `.ini` files have historically used
-(`0` = GA, `1` = GA_Rechenberg, `2` = DE; `DE_MCMC` is string-keyed only, no
-numeric ID). `Solvers/__init__.py:SOLVER_REGISTRY` is the single source of
+(`0` = GA, `1` = GA_Rechenberg, `2` = DE; `PSO` and `DE_MCMC` are
+string-keyed only, no numeric ID — neither has a historical `solOpt`
+value). `Solvers/__init__.py:SOLVER_REGISTRY` is the single source of
 truth for both.
 
 Optional hooks on `OptimizationProblem` — both no-ops by default:
@@ -70,6 +71,8 @@ Optional hooks on `OptimizationProblem` — both no-ops by default:
     └── de_solver.py          # DESolver + differential_evolution_step(population, F, CR) —
                              #   a standalone function physics modules that run their own
                              #   generation loop (e.g. EXAFS) can call directly
+    pso/
+    └── pso_solver.py          # PSOSolver — global-best Particle Swarm Optimization
     demcmc/                    # DE-BNN: DE reinterpreted as an MCMC sampler for BNN training
     ├── mlp.py                # MLPStructure — flat-genome feedforward MLP
     ├── bnn_problem.py        # BNNRegressionProblem — reference OptimizationProblem
@@ -87,6 +90,7 @@ Optional hooks on `OptimizationProblem` — both no-ops by default:
 | `GA` | 0 | `GASolver` |
 | `GA_RECHENBERG` | 1 | `GARechenbergSolver` |
 | `DE` | 2 | `DESolver` |
+| `PSO` | — | `PSOSolver` |
 | `DE_MCMC` | — | `DEMCMCSolver` |
 
 - **GA**: selection → crossover → mutation → evaluate, each stage a
@@ -102,6 +106,12 @@ Optional hooks on `OptimizationProblem` — both no-ops by default:
   the free function `differential_evolution_step(population, F, CR)` for
   physics modules that own their generation loop and just want the DE math
   per-generation (see `PhysicsModules/EXAFS/exafs_neo/neoSolver.py`).
+- **PSO**: global-best Particle Swarm Optimization (Kennedy & Eberhart
+  1995, Clerc & Kennedy 2002 constriction coefficients) — each individual
+  carries a velocity pulled toward its own best-known position and the
+  swarm's best-known position (`v = w*v + c1*r1*(pBest - x) + c2*r2*(gBest
+  - x)`), then moves and is re-clipped into the parameter space. No
+  historical `solOpt` precedent (string-keyed only, like `DE_MCMC`).
 - **DE_MCMC (DE-BNN)**: differential evolution reinterpreted as an MCMC
   sampler for Bayesian neural network posterior sampling (Forbes & Long,
   *Neurocomputing* 678 (2026) 133103). Not tied to any `PhysicsModules`

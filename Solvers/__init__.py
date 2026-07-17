@@ -26,6 +26,7 @@ from Solvers.core import (
 )
 from Solvers.ga import GASolver, GARechenbergSolver
 from Solvers.de import DESolver
+from Solvers.pso import PSOSolver
 from Solvers.demcmc import DEMCMCSolver
 
 # Numeric IDs preserve the historical EXAFS solOpt/solver_type values.
@@ -33,6 +34,7 @@ SOLVER_REGISTRY = {
     "GA": GASolver,
     "GA_RECHENBERG": GARechenbergSolver,
     "DE": DESolver,
+    "PSO": PSOSolver,
     "DE_MCMC": DEMCMCSolver,
     0: GASolver,
     1: GARechenbergSolver,
@@ -64,6 +66,7 @@ __all__ = [
     "GASolver",
     "GARechenbergSolver",
     "DESolver",
+    "PSOSolver",
     "DEMCMCSolver",
     "SOLVER_REGISTRY",
     "get_solver",

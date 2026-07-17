@@ -101,7 +101,7 @@ solver = get_solver("GA")(problem, options={"nPops": 100, "nGen": 100})
 result = solver.run()
 ```
 
-Available solvers: `GA`, `GA_Rechenberg`, `DE`, `DE_MCMC`. New solvers are
+Available solvers: `GA`, `GA_Rechenberg`, `DE`, `PSO`, `DE_MCMC`. New solvers are
 added under `Solvers/` and registered in `Solvers/__init__.py` — physics
 modules pick them up without code changes. `Solvers.de` also exposes
 `differential_evolution_step(population, F, CR)` as a standalone function,

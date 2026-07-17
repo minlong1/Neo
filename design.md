@@ -45,9 +45,10 @@ The goal of this design is a modular framework where:
 │  ga/    selectors · crossovers · mutators                │
 │         GASolver · GARechenbergSolver                    │
 │  de/    DESolver · differential_evolution_step()         │
+│  pso/   PSOSolver — global-best swarm optimization       │
 │  demcmc/ DEMCMCSolver — DE-BNN (Bayesian NN via DE-MCMC) │
 │                                                          │
-│  registry: get_solver("GA"|"GA_Rechenberg"|"DE"|"DE_MCMC")│
+│  registry: get_solver("GA"|"GA_Rechenberg"|"DE"|"PSO"|"DE_MCMC")│
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -108,7 +109,9 @@ pluggable strategies selected by the same numeric option IDs the historical
 - **Mutators**: per individual (0), per gene (1), per trait (2, stub),
   Metropolis (3), bounded (4)
 - **Solvers**: GA (0), GA + Rechenberg 1/5-rule mutation adaptation (1),
-  DE/rand/1/bin (2)
+  DE/rand/1/bin (2), plus string-keyed-only additions with no historical
+  `solOpt` precedent: PSO (global-best Particle Swarm Optimization) and
+  DE_MCMC (DE-BNN, below)
 
 `RunState` carries generation counters, timing, and best-fit tracking, so
 operators that need run context (Metropolis temperature, Rechenberg counter,

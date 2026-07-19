@@ -5,6 +5,7 @@ from Solvers.core.run_state import RunState
 from Solvers.core.population import Population
 from Solvers.core.result import SolverResult
 from Solvers.core.base_solver import BaseSolver
+from Solvers.core.refinement import local_search_refine
 
 __all__ = [
     "ContinuousGeneRange",
@@ -16,4 +17,5 @@ __all__ = [
     "Population",
     "SolverResult",
     "BaseSolver",
+    "local_search_refine",
 ]

@@ -46,9 +46,10 @@ The goal of this design is a modular framework where:
 │         GASolver · GARechenbergSolver                    │
 │  de/    DESolver · differential_evolution_step()         │
 │  pso/   PSOSolver — global-best swarm optimization       │
+│  cmaes/ CMAESSolver — covariance-adapted ES              │
 │  demcmc/ DEMCMCSolver — DE-BNN (Bayesian NN via DE-MCMC) │
 │                                                          │
-│  registry: get_solver("GA"|"GA_Rechenberg"|"DE"|"PSO"|"DE_MCMC")│
+│  registry: get_solver("GA"|"GA_Rechenberg"|"DE"|"PSO"|"CMA_ES"|"DE_MCMC")│
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -110,8 +111,15 @@ pluggable strategies selected by the same numeric option IDs the historical
   Metropolis (3), bounded (4)
 - **Solvers**: GA (0), GA + Rechenberg 1/5-rule mutation adaptation (1),
   DE/rand/1/bin (2), plus string-keyed-only additions with no historical
-  `solOpt` precedent: PSO (global-best Particle Swarm Optimization) and
-  DE_MCMC (DE-BNN, below)
+  `solOpt` precedent: PSO (global-best Particle Swarm Optimization,
+  optional periodic local-search refinement of the current best via
+  `Solvers.core.refinement.local_search_refine`), CMA_ES
+  ((mu/mu_w,lambda)-CMA-ES, covariance matrix adapted per-gene/
+  per-correlation step scale — added after an EXAFS solver benchmark
+  found DE_MCMC performing badly there specifically because its fixed
+  MCMC noise scale was inappropriate for EXAFS's heterogeneous
+  per-gene ranges; CMA-ES's whole point is adapting that scale instead
+  of using one global constant), and DE_MCMC (DE-BNN, below)
 
 `RunState` carries generation counters, timing, and best-fit tracking, so
 operators that need run context (Metropolis temperature, Rechenberg counter,

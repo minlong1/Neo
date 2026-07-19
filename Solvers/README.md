@@ -35,8 +35,8 @@ print(result.best_individual.genes, result.best_value)
 
 `get_solver` looks up a class by name (case-insensitive) or by the numeric
 `solOpt`/`solver_type` IDs EXAFS's `.ini` files have historically used
-(`0` = GA, `1` = GA_Rechenberg, `2` = DE; `PSO` and `DE_MCMC` are
-string-keyed only, no numeric ID — neither has a historical `solOpt`
+(`0` = GA, `1` = GA_Rechenberg, `2` = DE; `PSO`, `CMA_ES`, and `DE_MCMC`
+are string-keyed only, no numeric ID — none has a historical `solOpt`
 value). `Solvers/__init__.py:SOLVER_REGISTRY` is the single source of
 truth for both.
 
@@ -59,6 +59,10 @@ Optional hooks on `OptimizationProblem` — both no-ops by default:
     ├── problem.py            # OptimizationProblem ABC — the plug-in contract
     ├── run_state.py          # RunState: generation counter, timing, best-fit tracking
     ├── result.py              # SolverResult: per-generation history + best individual
+    ├── refinement.py          # local_search_refine — genome-agnostic periodic polish
+    │                        #   of one or more individuals (used by PSO's local_search
+    │                        #   option); perturb_scale is a *fraction of each gene's own
+    │                        #   range*, not a flat width — see its docstring for why
     └── base_solver.py        # BaseSolver ABC: owns the generation loop, subclasses implement step()
     ga/                        # Genetic Algorithm
     ├── selectors.py          # RouletteWheelSelector (0), TournamentSelector (1, stub)
@@ -72,7 +76,11 @@ Optional hooks on `OptimizationProblem` — both no-ops by default:
                              #   a standalone function physics modules that run their own
                              #   generation loop (e.g. EXAFS) can call directly
     pso/
-    └── pso_solver.py          # PSOSolver — global-best Particle Swarm Optimization
+    └── pso_solver.py          # PSOSolver — global-best Particle Swarm Optimization,
+                             #   optional periodic local_search refinement
+    cmaes/
+    └── cmaes_solver.py        # CMAESSolver — (mu/mu_w,lambda)-CMA-ES, covariance
+                             #   adapts per-gene/per-correlation step scale
     demcmc/                    # DE-BNN: DE reinterpreted as an MCMC sampler for BNN training
     ├── mlp.py                # MLPStructure — flat-genome feedforward MLP
     ├── bnn_problem.py        # BNNRegressionProblem — reference OptimizationProblem
@@ -91,6 +99,7 @@ Optional hooks on `OptimizationProblem` — both no-ops by default:
 | `GA_RECHENBERG` | 1 | `GARechenbergSolver` |
 | `DE` | 2 | `DESolver` |
 | `PSO` | — | `PSOSolver` |
+| `CMA_ES` | — | `CMAESSolver` |
 | `DE_MCMC` | — | `DEMCMCSolver` |
 
 - **GA**: selection → crossover → mutation → evaluate, each stage a
@@ -112,6 +121,21 @@ Optional hooks on `OptimizationProblem` — both no-ops by default:
   swarm's best-known position (`v = w*v + c1*r1*(pBest - x) + c2*r2*(gBest
   - x)`), then moves and is re-clipped into the parameter space. No
   historical `solOpt` precedent (string-keyed only, like `DE_MCMC`).
+  Optional `local_search` option periodically polishes just the current
+  best individual (`Solvers.core.refinement.local_search_refine`) —
+  targets PSO's actual observed weakness on EXAFS benchmarks, which
+  wasn't its mean/best but its run-to-run variance.
+- **CMA_ES**: (mu/mu_w,lambda)-CMA-ES (Hansen & Ostermeier; Hansen, "The
+  CMA Evolution Strategy: A Tutorial", arXiv:1604.00772) — samples each
+  generation from `N(m, sigma^2 * C)`, then adapts the mean, step size
+  `sigma` (cumulative step-size adaptation), and covariance `C` (rank-one
+  + rank-mu update) from the best `mu` of `lambda` candidates. `C` starts
+  as `diag(((high-low)/4)**2)` per gene rather than identity, so the
+  search begins already respecting each gene's own natural scale instead
+  of learning it from scratch — genomes with wildly different per-gene
+  ranges (as EXAFS's does) are exactly where a flat, gene-agnostic step
+  size hurts most (see `DE_MCMC`'s postmortem in `design.md`). No
+  historical `solOpt` precedent (string-keyed only, like `PSO`/`DE_MCMC`).
 - **DE_MCMC (DE-BNN)**: differential evolution reinterpreted as an MCMC
   sampler for Bayesian neural network posterior sampling (Forbes & Long,
   *Neurocomputing* 678 (2026) 133103). Not tied to any `PhysicsModules`

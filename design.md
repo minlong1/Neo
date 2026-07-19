@@ -213,14 +213,23 @@ keys, same test suite (verified identical pass/fail against the pre-refactor
 baseline). The operator modules (`neoSelector`, `neoCrossOver`, `neoMutator`,
 `neoSolver`) are now thin shims delegating to `Solvers.ga`/`Solvers.de`,
 preserving pinned quirks (e.g. `mutOpt == mut_options + 1`, exact label
-strings, Rechenberg writing `mutPars.mutChance`). `NeoRunStateView` adapts
-`NeoPars` bookkeeping to the `RunState` interface so generic operators see
-live EXAFS state. EXAFS's `Individual` subclasses the Solvers individual
-over the flat genome while keeping the historical path-oriented accessors.
-`solOpt == 2` (`NeoSolver_DE`, previously an unimplemented stub matching
-upstream EXAFS_Neo) now delegates to `Solvers.de.differential_evolution_step`
-directly against `NeoPopulations` — the first of the three EXAFS solver
-options to run actual differential evolution rather than a no-op.
+strings). `NeoRunStateView` adapts `NeoPars` bookkeeping to the `RunState`
+interface so generic operators see live EXAFS state. EXAFS's `Individual`
+subclasses the Solvers individual over the flat genome while keeping the
+historical path-oriented accessors. `solOpt == 2` (`NeoSolver_DE`, previously
+an unimplemented stub matching upstream EXAFS_Neo) now delegates to
+`Solvers.de.differential_evolution_step` directly against `NeoPopulations` —
+the first of the three EXAFS solver options to run actual differential
+evolution rather than a no-op.
+
+GA_Rechenberg's mutation-chance adaptation was a similar latent no-op until
+a 10-seed solver benchmark on the Cu fixture surfaced it (GA_Rechenberg
+produced bit-identical output to plain GA on every seed): the Rechenberg
+update wrote `mutPars.mutChance`, but `neoMutator.py:NeoMutator.mutate()`
+only ever read `mutChance` into the active operator once, at
+`initialize()`. Fixed by re-syncing the operator's `mut_chance` from
+`mutPars.mutChance` on every `mutate()` call — see `CLAUDE.md`'s EXAFS
+gotchas for the mechanism and the regression tests it points to.
 
 ### NanoIndentation (functional; clean re-port)
 

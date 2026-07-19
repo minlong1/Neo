@@ -1,7 +1,11 @@
+import os
 import unittest
 
 from PhysicsModules.EXAFS.exafs_neo.exafs_pop import NeoPopulations
+from PhysicsModules.EXAFS.exafs_neo.neoCrossOver import NeoCrossover
+from PhysicsModules.EXAFS.exafs_neo.neoMutator import NeoMutator
 from PhysicsModules.EXAFS.exafs_neo.neoPars import NeoPars
+from PhysicsModules.EXAFS.exafs_neo.neoSelector import NeoSelector
 from PhysicsModules.EXAFS.exafs_neo.neoSolver import NeoSolver
 
 
@@ -85,6 +89,50 @@ class TestNeoSolver(unittest.TestCase):
 
         after = exafs_Pars.bestFitPars.globBestVal
         self.assertLess(after, before)
+
+    def test_ga_rechenberg_adaptation_reaches_mutator(self):
+        """End-to-end: GA_Rechenberg's mutChance adaptation only starts
+        past currGen == 20 (rechenberg_update's gate), so a run long enough
+        to cross that must leave the *active mutator* holding a mutChance
+        that has drifted from its initial value — not just neo_pars'
+        bookkeeping copy. Regression test for the mutate()-resync fix."""
+        import tempfile
+
+        import numpy as np
+
+        np.random.seed(21)
+        output_path = os.path.join(tempfile.gettempdir(), 'exafs_test_rechenberg_out.csv')
+        inputs_pars = {
+            'data_file': 'tests/cu_test_files/cu_paths/cu_10k.xmu', 'output_file': output_path,
+            'feff_file': 'tests/cu_test_files/cu_paths/path_75/feff', 'kmin': 0.95,
+            'kmax': 9.775, 'kweight': 3.0, 'pathrange': [1, 2, 3, 4, 5],
+            'deltak': 0.05, 'rbkg': 1.1, 'bkgkw': 1.0, 'bkgkmax': 15.0,
+            'nPops': 20, 'nGen': 25, 'solOpt': 1,
+        }
+        exafs_Pars = NeoPars()
+        exafs_Pars.read_inputs(inputs_pars)
+        initial_mut_chance = exafs_Pars.mutPars.mutChance
+
+        neo_population = NeoPopulations(exafs_Pars)
+        neo_population.initialize_populations()
+
+        selector = NeoSelector()
+        crossover = NeoCrossover()
+        mutator = NeoMutator()
+        selector.initialize(exafs_Pars)
+        crossover.initialize(exafs_Pars)
+        mutator.initialize(exafs_Pars)
+
+        solver = NeoSolver()
+        solver.initialize(exafs_pars=exafs_Pars)
+
+        for _ in range(25):
+            exafs_Pars.runPars.start_gen()
+            solver.solve(neo_population, selector, crossover, mutator, exafs_Pars)
+            exafs_Pars.end_gen(neo_population)
+
+        self.assertNotEqual(mutator.mutator.mut_chance, initial_mut_chance)
+        self.assertEqual(mutator.mutator.mut_chance, exafs_Pars.mutPars.mutChance)
 
 
 if __name__ == '__main__':

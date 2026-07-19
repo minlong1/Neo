@@ -90,6 +90,24 @@ class TestNeoMutator(unittest.TestCase):
         self.assertEqual(mutator_operator.mutator.mutOpt, 6)
         self.assertEqual(mutator_operator.mutator.mutType, 'Mutate DE')
 
+    def test_neomutator_resyncs_mutchance_every_call(self):
+        """mutate() must re-read mutPars.mutChance each call, not just at
+        initialize() — this is what lets GA_Rechenberg's adaptive update
+        (which writes mutPars.mutChance) actually reach the operator."""
+        exafs_Pars = create_neo_mutator_operator(0)
+        mutator_operator = NeoMutator()
+        mutator_operator.initialize(exafs_pars=exafs_Pars)
+        neo_population = NeoPopulations(exafs_Pars)
+        neo_population.initialize_populations()
+
+        self.assertEqual(mutator_operator.mutator.mut_chance, exafs_Pars.mutPars.mutChance)
+
+        exafs_Pars.mutPars.mutChance = 0.85
+        mutator_operator.mutate(neo_population)
+
+        self.assertEqual(mutator_operator.mutator.mut_chance, 0.85)
+        self.assertEqual(mutator_operator.mutator.mutChance, 0.85)
+
 
 if __name__ == '__main__':
     unittest.main()

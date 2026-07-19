@@ -5,6 +5,14 @@ Solvers.ga.mutators; this module adapts them to the historical EXAFS API.
 The EXAFS-specific e0 mutation during the second half of the run stays
 here — it acts on the shared-e0 genome convention, which is EXAFS physics,
 not solver logic.
+
+`mutate()` re-syncs the active operator's `mut_chance` from
+`exafs_pars.mutPars.mutChance` on every call. This is what makes
+GA_Rechenberg's 1/5-success-rule adaptation (`neoSolver.py:
+NeoSolver_GA_Rechenberg.rechenberg_mutation`, which writes
+`mutPars.mutChance`) actually change mutation behavior generation over
+generation — the operator otherwise only reads `mutChance` once, at
+`initialize()`.
 """
 
 import numpy as np
@@ -89,6 +97,11 @@ class NeoMutator:
         else:
             if self.exafs_pars.runPars.secondHalf:
                 self.mutate_e0(pops)
+            # Re-sync from NeoPars every generation so an adapted mutChance
+            # (e.g. GA_Rechenberg's 1/5-rule update) actually reaches the
+            # operator, instead of only being visible at initialize() time.
+            self.mutator.mut_chance = self.exafs_pars.mutPars.mutChance
+            self.mutator.mutChance = self.exafs_pars.mutPars.mutChance
             self.mutator.mutate(pops)
 
     def mutate_e0(self, pops):

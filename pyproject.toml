@@ -32,7 +32,10 @@ exafs = ["xraylarch", "scipy", "attrs", "matplotlib", "psutil"]
 # matplotlib is for the optional printGraph output.
 nanoindentation = ["matplotlib"]
 xps = ["scipy", "numba", "matplotlib", "psutil"]
-all = ["exafs_neo[exafs,nanoindentation,xps]"]
+# Raman's core fit needs only numpy; matplotlib is for print_graph /
+# RamanAnalysis.plot().
+raman = ["matplotlib"]
+all = ["exafs_neo[exafs,nanoindentation,xps,raman]"]
 # AstroNeo has no extra here: its only third-party dependency is PyXspec
 # (ships with a HEASOFT source build, not on PyPI) plus the optional ACX2
 # local model (a separate personal/external package) -- see
@@ -49,6 +52,7 @@ nano_neo = "PhysicsModules.NanoIndentation.nanoindentation_neo.input_arg:main"
 xps_neo = "PhysicsModules.XPS.xps_neo.xps:main"
 xps_neo_gui = "PhysicsModules.XPS.xps_neo.gui.xps_neo_gui:main"
 astro_neo = "PhysicsModules.AstroNeo.astro_neo.input_arg:main"
+raman_neo = "PhysicsModules.Raman.raman_neo.input_arg:main"
 
 [tool.setuptools]
 include-package-data = true
@@ -60,3 +64,4 @@ exclude = ["*.tests", "*.tests.*"]
 
 [tool.setuptools.package-data]
 "PhysicsModules.EXAFS.exafs_neo.gui" = ["media/*"]
+"PhysicsModules.Raman.raman_neo" = ["data/*"]

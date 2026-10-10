@@ -1,0 +1,7 @@
+# center, shape, eta, base_width
+480.0, lorentzian, 1.0, 9.0
+720.0, lorentzian, 1.0, 12.0
+1350.0, voigt, 0.7, 28.0
+1580.0, lorentzian, 1.0, 18.0
+1000.0, lorentzian, 1.0, 15.0
+1700.0, gaussian, 0.0, 20.0

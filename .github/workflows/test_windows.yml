@@ -66,6 +66,10 @@ jobs:
       run: |
         python -m unittest discover -s PhysicsModules/NanoIndentation/tests -t . -v
 
+    - name: Run Raman tests
+      run: |
+        python -m unittest discover -s PhysicsModules/Raman/tests -t . -v
+
     - name: Run XPS tests
       # pytest, not unittest — see PhysicsModules/XPS/README.md. Golden
       # tests are bit-exact only in the pinned constraints.txt environment,

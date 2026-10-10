@@ -53,5 +53,18 @@ class RunState:
         self.bestDiff = delta if np.abs(delta) > min_delta else 0
 
         if self.currBestVal < self.globBestVal:
-            self.globBestInd = best_individual
+            self.globBestInd = _snapshot(best_individual)
             self.globBestVal = best_value
+
+
+def _snapshot(individual):
+    """Detached copy of a new global best.
+
+    The best individual is a live population member: selection carries
+    elites into the next generation by reference and mutators edit genes in
+    place, so storing the reference let globBestInd's genes drift away from
+    the globBestVal they were scored at (reported best fit != reported
+    genes). Objects without a `copy()` method are stored as-is.
+    """
+    copier = getattr(individual, "copy", None)
+    return copier() if callable(copier) else individual

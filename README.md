@@ -19,6 +19,7 @@ implementing a small problem interface.
     │   ├── EXAFS/                # EXAFS Neo — fully supported
     │   ├── NanoIndentation/      # Nano Neo — fully supported
     │   ├── XPS/                  # XPS Neo — fully supported (self-contained GA, see its README)
+    │   ├── Raman/                # Raman Neo — fully supported
     │   └── AstroNeo/             # Astro Neo — fits one X-ray spectral model via PyXspec (manual setup, see its README)
     ├── pyproject.toml
     └── README.md
@@ -33,6 +34,12 @@ information are in
 **NanoIndentation** (Nano Neo) fits the unloading segment of nanoindentation
 load–displacement curves with the Oliver-Pharr model. See
 [PhysicsModules/NanoIndentation/README.md](PhysicsModules/NanoIndentation/README.md).
+
+**Raman** (Raman Neo) fits Raman spectra as a sum of Lorentzian/Gaussian/
+pseudo-Voigt bands plus one shared wavenumber shift — the EXAFS genome
+shape (shared E0 + per-path parameters) with analytic line shapes in place
+of FEFF paths, so it needs numpy only. See
+[PhysicsModules/Raman/README.md](PhysicsModules/Raman/README.md).
 
 **XPS** (XPS Neo) fits X-ray Photoelectron Spectroscopy spectra (Voigt,
 Gaussian, Lorentzian, Double Lorentzian, Doniach-Sunjic peaks over Baseline/
@@ -77,14 +84,20 @@ pip install -e ".[xps]"
 xps_neo -i <your_xps_input.ini>
 xps_neo_gui
 
-# Everything (all three modules' extras at once)
+# Raman: adds matplotlib (only needed for print_graph = True;
+# the core fit runs on numpy alone)
+pip install -e ".[raman]"
+raman_neo -i PhysicsModules/Raman/raman_neo/data/sample_raman.ini
+
+# Everything (every module's pip-installable extras at once)
 pip install -e ".[all]"
 ```
 
 Extras are additive — installing a second module's extra doesn't uninstall
 the first's. Each module's own README has more detail (input file format,
 GUI notes, test commands): `PhysicsModules/EXAFS/README.md`,
-`PhysicsModules/NanoIndentation/README.md`, `PhysicsModules/XPS/README.md`.
+`PhysicsModules/NanoIndentation/README.md`, `PhysicsModules/XPS/README.md`,
+`PhysicsModules/Raman/README.md`.
 
 ## The Solvers contract
 
@@ -163,6 +176,9 @@ From the repository root:
     # NanoIndentation (numpy only)
     python -m unittest discover -s PhysicsModules/NanoIndentation/tests -t . -v
 
+    # Raman (numpy only)
+    python -m unittest discover -s PhysicsModules/Raman/tests -t . -v
+
     # XPS (pytest, not unittest — see PhysicsModules/XPS/README.md)
     cd PhysicsModules/XPS && pytest -m "not golden" -q
 
@@ -175,4 +191,5 @@ Typical runs from the repository root:
     exafs_neo -i <your_exafs_input.ini>
     nano_neo -i <your_nanoindent_input.ini>
     xps_neo -i <your_xps_input.ini>
+    raman_neo -i <your_raman_input.ini>
     astro_neo -i <your_astro_input.ini>   # needs PyXspec set up manually, see its README

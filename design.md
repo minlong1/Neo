@@ -75,6 +75,7 @@ Physics modules define the genome layout and its meaning:
 | NanoIndentation | `[(A, hf, m) × npaths]`                    | none         |
 | XPS             | not a flat float vector — see below        | n/a          |
 | AstroNeo        | one gene per `ModelSpec.free_params` entry | none         |
+| Raman           | `[shift, (amp, width, cshift) × nband]`    | shift        |
 
 XPS's actual "genome" (`Individual.get_params()`) is a list of floats
 **interleaved with peak/background type-name strings** (`'Voigt'`,
@@ -290,6 +291,33 @@ and the rest of the framework stay usable without it; the one PyXspec-
 backed test self-skips unless PyXspec is importable and a real spectrum is
 pointed to via environment variables (see the README's "Tests" section).
 
+### Raman (functional; clean re-port)
+
+Ported from the standalone `raman_neo` package, which was a Raman
+re-implementation of EXAFS Neo: same GA engine, with FEFF paths replaced
+by analytic Lorentzian/Gaussian/pseudo-Voigt bands and S02/E0/sigma2/deltaR
+replaced by amp/shift/width/center_shift. Handled like NanoIndentation: no
+API freeze (raman_neo was v0.1.0), so its forked GA (`neoPars`, `neoSelector`,
+`neoCrossOver`, `neoMutator`, `neoSolver`, `individual`, `bandObj`, ...) was
+deleted, not shimmed. The module keeps only physics — `bandshape.py`,
+`bandrange.py`, `raman_data.py` (load/resample/baseline/normalise),
+`problem.py:RamanProblem`, the `.ini` parser (same file format), the
+`RamanNeo` runner (`raman_neo` CLI), and `analysis/` (peak table,
+R-factor, report). The genome is EXAFS-shaped (one shared shift gene), and
+EXAFS's E0 handling is expressed through the problem hooks this design
+reserves for it: a shift grid sweep in `on_generation_end` at `nGen // 2`
+and in `on_run_end`, with `sample_genes` pinning new genomes to the best
+shift after the midpoint. Deliberate behaviour changes: the shift is an
+ordinary gene (raman_neo's separate second-half shift mutation is gone),
+the sweep stays within the shift gene's own grid, the baseline is fitted only
+where the spectrum has data (not over the zero-padded start of the model grid), and `solver_options = 2`
+now runs real DE instead of raman_neo's no-op stub.
+
+Porting it surfaced a framework bug in `Solvers.core.RunState`:
+`globBestInd` was stored by reference, and since elites are carried over
+by reference and mutated in place, the reported best genes could stop
+matching the reported best score. `update_best` now stores a copy.
+
 ## Design rules
 
 1. `Solvers/` imports numpy only. A physics dependency appearing there is a
@@ -349,6 +377,13 @@ pointed to via environment variables (see the README's "Tests" section).
   regression converges with posterior sample counts matching
   `(nGen - burn_in) * num_chains` and a credible interval that brackets
   the true function.
+- Raman is verified against noise-free synthetic spectra with known bands
+  (truth genome scores ~0, standalone `raman_score` agrees with
+  `RamanProblem.fitness`, the shift sweep recovers an injected 3 cm⁻¹
+  offset, band_optimize drops zero-area decoys), every solver and
+  mutation option end-to-end through the `.ini` runner, and a 5-seed
+  comparison against standalone raman_neo on its bundled sample
+  (comparable or better final fitness and R-factor).
 - AstroNeo's parser, `ModelSpec` name-to-index resolution, and path
   resolvers are covered by pure-numpy/no-PyXspec unit tests, run in CI.
   The PyXspec-backed fitness path (`TestAstroNeoProblemLive`) can only be

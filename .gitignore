@@ -78,3 +78,9 @@ test_inputs/
 # Submodules #
 #####################
 contrib/
+
+# Raman sample data: re-include past the blanket *.txt rule and `Data/`
+# (which also matches data/ on case-insensitive filesystems, e.g. macOS).
+# Kept last so these negations win.
+!PhysicsModules/Raman/raman_neo/data/
+!PhysicsModules/Raman/raman_neo/data/*.txt

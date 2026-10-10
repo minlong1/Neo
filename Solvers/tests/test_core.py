@@ -135,6 +135,17 @@ class TestRunState(unittest.TestCase):
         self.assertEqual(state.globBestInd, "ind1")
         self.assertEqual(state.globBestVal, 3.0)
 
+    def test_global_best_is_detached_from_population(self):
+        # Elites are carried over by reference and mutated in place; the
+        # recorded global best must keep the genes it was scored with.
+        space = ParameterSpace([GeneRange([0.0, 1.0, 2.0]), GeneRange([0.0, 1.0, 2.0])])
+        ind = Individual(space, [1.0, 2.0])
+        state = RunState(n_gen=10)
+        state.update_best(ind, 1.0)
+        ind.genes[0] = 0.0
+        self.assertIsNot(state.globBestInd, ind)
+        np.testing.assert_array_equal(state.globBestInd.genes, [1.0, 2.0])
+
     def test_small_delta_zeroes_bestdiff(self):
         state = RunState(n_gen=10)
         state.update_best("a", 3.0)

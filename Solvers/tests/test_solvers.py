@@ -57,6 +57,24 @@ class TestGASolverConvergence(unittest.TestCase):
         self.assertEqual(problem.run_end_calls, 1)
 
 
+class TestBestIndividualConsistency(unittest.TestCase):
+    def test_reported_best_genes_match_reported_score(self):
+        # Regression: the global best used to alias a population member that
+        # per-gene mutation later edited in place, so result.best_individual's
+        # genes no longer scored result.best_value.
+        for mut_opt in (1, 4):
+            with self.subTest(mut_opt=mut_opt):
+                np.random.seed(0)
+                problem = QuadraticProblem()
+                solver = GASolver(
+                    problem, options={"nPops": 30, "nGen": 25, "mutChance": 0.5, "mutOpt": mut_opt}
+                )
+                result = solver.run()
+                self.assertAlmostEqual(
+                    problem.fitness(result.best_individual.genes), result.best_value
+                )
+
+
 class TestGARechenberg(unittest.TestCase):
     def test_runs_and_adapts(self):
         np.random.seed(3)
